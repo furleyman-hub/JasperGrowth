@@ -1,3 +1,11 @@
+// Firebase web config: Firebase console → Project settings → General → Your apps → Web app.
+// These values are not secrets. Access is controlled by firestore.rules and the
+// "allowed" collection. Leave as null to keep data on this phone only.
+window.FIREBASE_CONFIG = null;
+
+// Web Push certificate key: Project settings → Cloud Messaging → Web Push certificates.
+window.FIREBASE_VAPID_KEY = BK43vDHQ_NmZHBY9QIUw9eVG1_RNvBw1Ay-8zRSyf8yLbhWJLUsSsMmkrvIuFzbuYPtDz8aUctdFKeEmVU7--VQ;
+
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 // TODO: Add SDKs for Firebase products that you want to use
@@ -15,3 +23,4 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+

@@ -1,6 +1,6 @@
 // Offline cache + reminder notifications.
 // Bump CACHE when shipping changes so phones pick up the new files.
-const CACHE = 'gh-tracker-v4';
+const CACHE = 'gh-tracker-v5';
 const FILES = [
   './',
   'index.html',
@@ -33,8 +33,11 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin && url.host !== 'www.gstatic.com') return;
+  // 'no-cache' revalidates with the server, so a new version shows up on the next open
+  // instead of after GitHub Pages' 10-minute browser cache expires.
+  const req = url.origin === self.location.origin ? new Request(e.request, { cache: 'no-cache' }) : e.request;
   e.respondWith(
-    fetch(e.request)
+    fetch(req)
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();

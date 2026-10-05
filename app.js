@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.3.1';
+  const VERSION = '0.4.0';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -305,6 +305,11 @@
   function onEditTime() {
     const entry = store.state.log[viewDate];
     $('time-input').value = entry && entry.at ? hhmmOf(entry.at) : (store.state.settings.reminderTime || '20:00');
+    $('by-input').value = (entry && entry.by) || '';
+    // Suggest names already used on entries, plus the signed-in person.
+    const names = new Set(Object.values(store.state.log).map((e) => e.by).filter(Boolean));
+    if (byName()) names.add(byName());
+    $('by-names').innerHTML = [...names].sort().map((n) => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
     editingTime = true;
     renderToday();
     $('time-input').focus();
@@ -315,7 +320,10 @@
     const v = $('time-input').value;
     if (!entry || !v) return toast('Pick a time');
     editingTime = false;
-    run(store.setDay(viewDate, { ...entry, at: atFor(viewDate, v) }), 'Time updated');
+    const by = $('by-input').value.trim();
+    const updated = { ...entry, at: atFor(viewDate, v) };
+    if (by) updated.by = by; else delete updated.by;
+    run(store.setDay(viewDate, updated), 'Saved');
     renderToday();
   }
 

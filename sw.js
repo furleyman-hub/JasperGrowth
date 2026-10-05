@@ -1,6 +1,6 @@
 // Offline cache + reminder notifications.
 // Bump CACHE when shipping changes so phones pick up the new files.
-const CACHE = 'gh-tracker-v5';
+const CACHE = 'gh-tracker-v6';
 const FILES = [
   './',
   'index.html',

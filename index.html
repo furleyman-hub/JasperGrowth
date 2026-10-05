@@ -46,11 +46,15 @@
 
       <button id="give-btn" class="give-btn"></button>
       <button id="skip-btn" class="link-btn"></button>
-      <button id="time-btn" class="link-btn hidden">Change time given</button>
-      <div id="time-edit" class="inline time-edit hidden">
-        <input type="time" id="time-input" aria-label="Time given">
-        <button class="small-btn" id="time-save">Save</button>
-        <button class="small-btn" id="time-cancel">Cancel</button>
+      <button id="time-btn" class="link-btn hidden">Change time or who gave it</button>
+      <div id="time-edit" class="time-edit hidden">
+        <label>Time given <input type="time" id="time-input"></label>
+        <label>Given by <input type="text" id="by-input" list="by-names" maxlength="30" placeholder="Name" autocomplete="off"></label>
+        <datalist id="by-names"></datalist>
+        <div class="inline">
+          <button class="small-btn" id="time-save">Save</button>
+          <button class="small-btn" id="time-cancel">Cancel</button>
+        </div>
       </div>
 
       <div class="cards">

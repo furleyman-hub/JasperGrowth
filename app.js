@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.2.0';
+  const VERSION = '0.3.0';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -11,6 +11,7 @@
   let viewDate = S.localToday();
   let selectedSite = null; // site chosen in the picker for viewDate
   let settingsOpen = false;
+  let editingTime = false; // time editor open for viewDate
 
   function prettyDate(iso, opts = { weekday: 'long', month: 'long', day: 'numeric' }) {
     const [y, m, d] = iso.split('-').map(Number);
@@ -23,6 +24,17 @@
     if (diff === -1) return 'Yesterday';
     if (diff === 1) return 'Tomorrow';
     return null;
+  }
+  const pad = (n) => String(n).padStart(2, '0');
+  const hhmmOf = (isoTs) => { const d = new Date(isoTs); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  // Timestamp for a dose given on the evening of iso at hh:mm. Times before 5am
+  // count as after midnight, i.e. the next calendar day.
+  function atFor(iso, hhmm) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const [h, mi] = hhmm.split(':').map(Number);
+    const dt = new Date(y, m - 1, d, h, mi);
+    if (h < 5) dt.setDate(dt.getDate() + 1);
+    return dt.toISOString();
   }
   const timeOf = (isoTs) => new Date(isoTs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
@@ -74,6 +86,9 @@
     give.hidden = skip.hidden = false;
     give.disabled = false;
     let showPicker = false;
+    const isGiven = !!(entry && entry.status === 'given');
+    $('time-btn').classList.toggle('hidden', !isGiven || editingTime);
+    $('time-edit').classList.toggle('hidden', !isGiven || !editingTime);
 
     const last = S.lastSite(state.log, viewDate);
     const lastText = last ? `Last site: ${last.site} · ${relLabel(last.iso) || shortDate(last.iso)}` : '';
@@ -253,6 +268,7 @@
   function go(d) {
     viewDate = d;
     selectedSite = null;
+    editingTime = false;
     renderToday();
   }
 
@@ -276,13 +292,31 @@
     const e = {
       status: 'given',
       mg: plan.dose,
-      at: new Date().toISOString(),
+      // Logged after the fact: assume that evening's reminder time (editable afterwards).
+      at: viewDate < S.localToday() ? atFor(viewDate, state.settings.reminderTime || '20:00') : new Date().toISOString(),
       cartridgeId: c.cartridge ? c.cartridge.id : null,
       site: selectedSite || S.nextSite(S.lastSite(state.log, viewDate)),
     };
     if (byName()) e.by = byName();
     run(store.setDay(viewDate, e));
     toast(`Logged ${fmt(plan.dose)} mg · ${e.site}`);
+  }
+
+  function onEditTime() {
+    const entry = store.state.log[viewDate];
+    $('time-input').value = entry && entry.at ? hhmmOf(entry.at) : (store.state.settings.reminderTime || '20:00');
+    editingTime = true;
+    renderToday();
+    $('time-input').focus();
+  }
+
+  function onSaveTime() {
+    const entry = store.state.log[viewDate];
+    const v = $('time-input').value;
+    if (!entry || !v) return toast('Pick a time');
+    editingTime = false;
+    run(store.setDay(viewDate, { ...entry, at: atFor(viewDate, v) }), 'Time updated');
+    renderToday();
   }
 
   function onSkip() {
@@ -446,6 +480,9 @@
   $('date-label').addEventListener('click', () => go(S.localToday()));
   $('give-btn').addEventListener('click', onGive);
   $('skip-btn').addEventListener('click', onSkip);
+  $('time-btn').addEventListener('click', onEditTime);
+  $('time-save').addEventListener('click', onSaveTime);
+  $('time-cancel').addEventListener('click', () => { editingTime = false; renderToday(); });
   $('new-cart-btn').addEventListener('click', onNewCartridge);
   $('add-needles-btn').addEventListener('click', onAddNeedles);
   $('spare-minus').addEventListener('click', () => onSpare(-1));
@@ -465,7 +502,7 @@
 
   // Jump back to today when the app is reopened on a new day.
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && viewDate !== S.localToday()) { viewDate = S.localToday(); selectedSite = null; render(); }
+    if (!document.hidden && viewDate !== S.localToday()) { viewDate = S.localToday(); selectedSite = null; editingTime = false; render(); }
   });
 
   store.onChange(render);

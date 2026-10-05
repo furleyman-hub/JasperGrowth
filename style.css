@@ -20,7 +20,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 #app { max-width: 520px; margin: 0 auto; padding: 0 16px calc(24px + env(safe-area-inset-bottom)); }
-.hidden { display: none !important; }
+.hidden, [hidden] { display: none !important; }
 button { font: inherit; color: inherit; cursor: pointer; }
 
 .topbar {
@@ -159,3 +159,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .gate .give-btn { margin-top: 24px; }
 .settings.card { margin-top: 14px; }
 .inline + .inline { margin-top: 10px; }
+
+.time-edit { justify-content: center; margin-top: 10px; }
+.time-edit input {
+  flex: 0 1 160px; font: inherit; font-size: 18px; color: var(--text); background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 10px; color-scheme: dark;
+}

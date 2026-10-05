@@ -12,8 +12,17 @@
 </head>
 <body>
   <main id="app">
+    <!-- Sign-in / status (shared mode only) -->
+    <section id="view-gate" class="view gate hidden">
+      <img src="icons/icon.svg" alt="" class="gate-icon">
+      <h1>Growth Tracker</h1>
+      <p id="gate-msg" class="muted"></p>
+      <button id="signin-btn" class="give-btn hidden">Sign in with Google</button>
+      <button id="gate-signout" class="link-btn hidden">Use a different account</button>
+    </section>
+
     <!-- Today view -->
-    <section id="view-today" class="view">
+    <section id="view-today" class="view hidden">
       <header class="topbar">
         <button class="nav-btn" id="prev-day" aria-label="Previous day">‹</button>
         <div class="date-block">
@@ -27,6 +36,12 @@
         <div class="hero-caption" id="hero-caption">Tonight's dose</div>
         <div class="hero-dose"><span id="hero-value">–</span><span class="hero-unit" id="hero-unit">mg</span></div>
         <div class="hero-sub" id="hero-sub"></div>
+        <div class="hero-site" id="hero-site"></div>
+      </div>
+
+      <div id="site-picker" class="site-picker">
+        <div class="card-title">Injection site</div>
+        <div class="chips" id="site-chips"></div>
       </div>
 
       <button id="give-btn" class="give-btn"></button>
@@ -40,8 +55,32 @@
             <div class="cart-doses" id="cart-doses"></div>
           </div>
           <div class="bar"><div class="bar-fill" id="cart-bar"></div></div>
-          <div class="cart-warn" id="cart-warn"></div>
+          <div class="warn" id="cart-warn"></div>
           <button class="small-btn" id="new-cart-btn">Started a new cartridge</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Supplies</div>
+          <div class="supply-row">
+            <span>Needles</span>
+            <span class="supply-val" id="needles-left">–</span>
+            <button class="small-btn" id="add-needles-btn">+ Box of 100</button>
+          </div>
+          <div class="supply-row">
+            <span>Spare cartridges</span>
+            <span class="supply-val" id="spare-carts">0</span>
+            <span class="stepper">
+              <button class="small-btn" id="spare-minus" aria-label="One less">−</button>
+              <button class="small-btn" id="spare-plus" aria-label="One more">+</button>
+            </span>
+          </div>
+          <div class="supply-row" id="delivery-row">
+            <span>Next delivery</span>
+            <span class="supply-val" id="next-delivery">–</span>
+            <span></span>
+          </div>
+          <div class="supply-note" id="supply-note"></div>
+          <div class="warn" id="supply-warn"></div>
         </div>
 
         <div class="card">
@@ -56,7 +95,7 @@
       </div>
 
       <footer class="footer">
-        <button class="link-btn" id="open-settings">Settings &amp; backup</button>
+        <button class="link-btn" id="open-settings">Settings</button>
       </footer>
     </section>
 
@@ -67,7 +106,21 @@
         <div class="date-block"><div class="date-label">Settings</div></div>
         <span class="nav-btn"></span>
       </header>
-      <form id="settings-form" class="settings">
+
+      <div class="card" id="account-card">
+        <div class="card-title">Account</div>
+        <p class="muted" id="account-msg"></p>
+        <button class="small-btn" id="signout-btn">Sign out</button>
+      </div>
+
+      <div class="card" id="reminder-card">
+        <div class="card-title">Reminders on this phone</div>
+        <p class="muted" id="reminder-msg"></p>
+        <button class="small-btn" id="reminder-btn"></button>
+      </div>
+
+      <form id="settings-form" class="settings card">
+        <div class="card-title">Prescription &amp; schedule</div>
         <label>Name <input name="name" type="text" placeholder="e.g. Jasper"></label>
         <label>First injection date <input name="startDate" type="date" required></label>
         <label>First dose (mg) <input name="doseA" type="number" step="0.1" min="0" required></label>
@@ -81,24 +134,30 @@
           </select>
         </label>
         <label>Cartridge size (mg) <input name="cartridgeMg" type="number" step="0.1" min="0" required></label>
+        <label>Reminder time (shared) <input name="reminderTime" type="time"></label>
+        <label>Next delivery date <input name="nextDelivery" type="date"></label>
         <button type="submit" class="give-btn">Save</button>
       </form>
 
       <div class="card">
-        <div class="card-title">Adjust current cartridge</div>
-        <p class="muted">If the pen shows a different amount, set what's actually left.</p>
+        <div class="card-title">Fix counts</div>
+        <p class="muted">If the pen or the needle box shows something different, set the real number.</p>
         <div class="inline">
-          <input id="adjust-left" type="number" step="0.1" min="0" placeholder="mg left">
+          <input id="adjust-left" type="number" step="0.1" min="0" placeholder="mg left in cartridge">
           <button class="small-btn" id="adjust-btn">Set</button>
+        </div>
+        <div class="inline">
+          <input id="adjust-needles" type="number" step="1" min="0" placeholder="Needles on hand">
+          <button class="small-btn" id="needles-btn">Set</button>
         </div>
       </div>
 
       <div class="card">
         <div class="card-title">Backup</div>
-        <p class="muted">Data is stored only on this phone. Export a backup now and then.</p>
+        <p class="muted" id="backup-msg">Export a copy of all records.</p>
         <div class="inline">
           <button class="small-btn" id="export-btn">Export</button>
-          <label class="small-btn file-btn">Import<input id="import-file" type="file" accept="application/json" hidden></label>
+          <label class="small-btn file-btn" id="import-label">Import<input id="import-file" type="file" accept="application/json" hidden></label>
         </div>
       </div>
       <p class="muted center" id="version"></p>
@@ -106,7 +165,9 @@
   </main>
 
   <div id="toast" class="toast"></div>
+  <script src="firebase-config.js"></script>
   <script src="schedule.js"></script>
+  <script src="store.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

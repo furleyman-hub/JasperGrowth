@@ -1,0 +1,43 @@
+name: Dose reminder
+
+# Every 30 minutes in the evening, US time (21:00–05:59 UTC = 5pm–2am EDT / 4pm–1am EST).
+# GitHub may start scheduled runs a few minutes late.
+on:
+  schedule:
+    - cron: '7,37 21-23 * * *'
+    - cron: '7,37 0-5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: reminder
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check setup
+        id: check
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT secret not set. Skipping."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+      - name: Send reminder
+        if: steps.check.outputs.ready == 'true'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          npm install --prefix .github/scripts --no-audit --no-fund --silent
+          node .github/scripts/remind.cjs

@@ -1,9 +1,14 @@
-// Pure schedule/cartridge logic. No DOM access, so it can be tested in Node.
+// Pure schedule / supply logic. No DOM access, so it can be used from Node
+// (tests and the reminder job) as well as the browser.
 (function (root) {
   const DAY_MS = 86400000;
+  const EPS = 1e-6;
 
-  // Dates are handled as 'YYYY-MM-DD' strings in local time; arithmetic is
-  // done at UTC midnight so daylight-saving changes can't shift a day.
+  // Rotation order for injection sites.
+  const SITES = ['Right thigh', 'Left thigh', 'Right belly', 'Left belly', 'Right arm', 'Left arm'];
+
+  // Dates are 'YYYY-MM-DD' strings in local time; arithmetic is done at UTC
+  // midnight so daylight-saving changes can't shift a day.
   function toUTC(iso) {
     const [y, m, d] = iso.split('-').map(Number);
     return Date.UTC(y, m - 1, d);
@@ -20,59 +25,135 @@
   function weekday(iso) {
     return new Date(toUTC(iso)).getUTCDay();
   }
-  function localToday(now = new Date()) {
+  function localToday(now = new Date(), timeZone) {
+    if (timeZone) {
+      // en-CA formats as YYYY-MM-DD
+      return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+    }
     const p = (n) => String(n).padStart(2, '0');
     return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
   }
-
-  // Describe the plan for a given date.
-  // The dose alternates by scheduled injection number, so the rest night
-  // doesn't break the alternation and a missed dose doesn't shift it.
-  function planFor(iso, s) {
-    const dayNumber = diffDays(s.startDate, iso) + 1;
-    if (dayNumber < 1) return { iso, dayNumber, before: true, scheduled: false };
-    const rest = weekday(iso) === Number(s.restDay);
-    if (rest) return { iso, dayNumber, scheduled: false, rest: true };
-    let n = 0;
-    for (let d = s.startDate; d <= iso; d = addDays(d, 1)) {
-      if (weekday(d) !== Number(s.restDay)) n++;
-    }
-    const dose = n % 2 === 1 ? Number(s.doseA) : Number(s.doseB);
-    return { iso, dayNumber, scheduled: true, injectionNumber: n, dose };
-  }
-
-  // Remaining mg in the current (most recent) cartridge.
-  function cartridgeStatus(state) {
-    const carts = state.cartridges;
-    const cur = carts[carts.length - 1];
-    let used = 0;
-    for (const entry of Object.values(state.log)) {
-      if (entry.status === 'given' && entry.cartridgeId === cur.id) used += Number(entry.mg);
-    }
-    const left = Math.max(0, round1(Number(cur.mg) - used - Number(cur.adjust || 0)));
-    return { cartridge: cur, used: round1(used), left, size: Number(cur.mg) };
-  }
-
-  // How many upcoming scheduled doses (starting at fromIso) the remaining mg covers.
-  function dosesCovered(left, fromIso, s) {
-    let count = 0;
-    let remaining = left;
-    let d = fromIso;
-    for (let i = 0; i < 60; i++, d = addDays(d, 1)) {
-      const p = planFor(d, s);
-      if (!p.scheduled) continue;
-      if (remaining + 1e-9 < p.dose) break;
-      remaining -= p.dose;
-      count++;
-    }
-    return count;
-  }
-
-  function round1(x) {
+  function round2(x) {
     return Math.round(x * 100) / 100;
   }
 
-  const api = { addDays, diffDays, weekday, localToday, planFor, cartridgeStatus, dosesCovered, round1 };
-  if (typeof module !== 'undefined') module.exports = api;
+  // Plan every day from the start date through untilIso.
+  // Doses alternate A, B, A, B... by injections actually given: a night marked
+  // "missed" gets its dose carried to the next scheduled night, and the
+  // alternation continues from there. Unlogged nights are assumed given.
+  function computePlans(settings, log, untilIso) {
+    const plans = new Map();
+    const A = Number(settings.doseA);
+    const B = Number(settings.doseB);
+    let next = A;
+    let given = 0;
+    let day = 1;
+    for (let d = settings.startDate; d <= untilIso; d = addDays(d, 1), day++) {
+      if (weekday(d) === Number(settings.restDay)) {
+        plans.set(d, { iso: d, dayNumber: day, scheduled: false, rest: true });
+        continue;
+      }
+      plans.set(d, { iso: d, dayNumber: day, scheduled: true, injectionNumber: given + 1, dose: next });
+      const e = log[d];
+      if (e && e.status === 'skipped') continue;
+      given++;
+      const mg = e && e.status === 'given' ? Number(e.mg) : next;
+      next = Math.abs(mg - A) < EPS ? B : A;
+    }
+    return plans;
+  }
+
+  function planFor(iso, settings, log, plans) {
+    if (iso < settings.startDate) {
+      return { iso, dayNumber: diffDays(settings.startDate, iso) + 1, before: true, scheduled: false };
+    }
+    if (!plans || !plans.has(iso)) plans = computePlans(settings, log, iso);
+    return plans.get(iso);
+  }
+
+  function currentCartridge(state) {
+    const carts = state.cartridges || [];
+    return carts[carts.length - 1] || null;
+  }
+
+  // Remaining mg in the current (most recently started) cartridge.
+  function cartridgeStatus(state) {
+    const cur = currentCartridge(state);
+    if (!cur) return { cartridge: null, used: 0, left: 0, size: Number(state.settings.cartridgeMg) || 1 };
+    let used = 0;
+    for (const e of Object.values(state.log)) {
+      if (e.status === 'given' && e.cartridgeId === cur.id) used += Number(e.mg);
+    }
+    const left = Math.max(0, round2(Number(cur.mg) - used - Number(cur.adjust || 0)));
+    return { cartridge: cur, used: round2(used), left, size: Number(cur.mg) };
+  }
+
+  // Needles on hand: the count last set, minus doses given since then.
+  function needlesLeft(state) {
+    const n = state.settings.needles;
+    if (!n || n.count === undefined || n.count === null || n.count === '') return null;
+    let used = 0;
+    for (const e of Object.values(state.log)) {
+      if (e.status === 'given' && e.at && e.at > n.asOf) used++;
+    }
+    return Number(n.count) - used;
+  }
+
+  // Most recent given injection strictly before beforeIso that recorded a site.
+  function lastSite(log, beforeIso) {
+    let best = null;
+    for (const [iso, e] of Object.entries(log)) {
+      if (e.status !== 'given' || !e.site || iso >= beforeIso) continue;
+      if (!best || iso > best.iso) best = { iso, site: e.site };
+    }
+    return best;
+  }
+
+  function nextSite(last) {
+    if (!last) return SITES[0];
+    const i = SITES.indexOf(last.site);
+    return SITES[(i + 1) % SITES.length];
+  }
+
+  // Look ahead from fromIso, assuming every scheduled dose is given:
+  // how many doses the current cartridge covers, when a new cartridge is needed,
+  // and the last date medicine (including spare cartridges) and needles cover.
+  function forecast(state, fromIso, horizonDays = 400) {
+    const s = state.settings;
+    const until = addDays(fromIso, horizonDays);
+    const plans = computePlans(s, state.log, until);
+    let cur = cartridgeStatus(state).left;
+    let spares = Number(s.spareCartridges) || 0;
+    let needles = needlesLeft(state);
+    const out = { dosesInCartridge: 0, newCartridgeOn: null, medsThrough: null, needlesThrough: null, medsOut: false, needlesOut: false };
+    for (let d = fromIso; d <= until; d = addDays(d, 1)) {
+      const p = plans.get(d);
+      if (!p || !p.scheduled) continue;
+      if (!out.medsOut) {
+        if (cur + EPS < p.dose) {
+          if (!out.newCartridgeOn) out.newCartridgeOn = d;
+          if (spares > 0) { spares--; cur = Number(s.cartridgeMg); }
+          else out.medsOut = true;
+        }
+        if (!out.medsOut) {
+          cur -= p.dose;
+          if (!out.newCartridgeOn) out.dosesInCartridge++;
+          out.medsThrough = d;
+        }
+      }
+      if (needles !== null && !out.needlesOut) {
+        if (needles <= 0) out.needlesOut = true;
+        else { needles--; out.needlesThrough = d; }
+      }
+      if (out.medsOut && (needles === null || out.needlesOut)) break;
+    }
+    return out;
+  }
+
+  const api = {
+    SITES, addDays, diffDays, weekday, localToday, round2,
+    computePlans, planFor, currentCartridge, cartridgeStatus, needlesLeft, lastSite, nextSite, forecast,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Schedule = api;
 })(this);

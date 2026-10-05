@@ -1,0 +1,8 @@
+{
+  "name": "growth-tracker-reminder",
+  "private": true,
+  "description": "Sends dose reminders via Firebase Cloud Messaging (run by .github/workflows/reminder.yml)",
+  "dependencies": {
+    "firebase-admin": "^14.5.0"
+  }
+}

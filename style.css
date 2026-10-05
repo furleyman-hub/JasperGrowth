@@ -76,8 +76,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bar { height: 8px; background: rgba(255, 255, 255, 0.12); border-radius: 4px; margin: 10px 0; overflow: hidden; }
 .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
 .bar-fill.low { background: var(--warn); }
-.cart-warn { color: var(--warn); font-size: 14px; min-height: 0; margin-bottom: 8px; }
-.cart-warn:empty { display: none; }
+.warn { color: var(--warn); font-size: 14px; margin: 8px 0; }
+.warn:empty { display: none; }
 .small-btn {
   display: inline-block; border: 1px solid rgba(255, 255, 255, 0.2); background: transparent;
   border-radius: 12px; padding: 10px 14px; font-size: 15px; color: var(--text);
@@ -94,6 +94,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .fc-val { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .fc-val.rest { font-size: 13px; font-weight: 400; color: var(--muted); }
 .fc-mark { font-size: 13px; color: var(--good); min-height: 16px; }
+.fc-mark.bad { color: var(--warn); }
 
 .history { list-style: none; margin: 0; padding: 0; }
 .history li {
@@ -128,3 +129,33 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-weight: 600; transition: transform 0.25s; pointer-events: none;
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
+
+.hero-site { font-size: 16px; color: var(--muted); margin-top: 8px; min-height: 20px; }
+.hero.done .hero-site { color: var(--text); }
+
+.site-picker { margin: 0 0 16px; }
+.site-picker .card-title { text-align: center; }
+.chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.chip {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 48px; padding: 8px; border-radius: 12px; font-size: 16px;
+  background: var(--card); border: 2px solid transparent;
+}
+.chip small { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.chip.on { border-color: var(--accent); background: rgba(79, 195, 247, 0.15); }
+
+.supply-row {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+  padding: 6px 0; font-size: 16px;
+}
+.supply-val { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; min-width: 40px; }
+.stepper { display: flex; gap: 6px; }
+.stepper .small-btn { min-width: 44px; }
+.supply-note { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+.gate { text-align: center; padding-top: 18vh; }
+.gate-icon { width: 96px; height: 96px; border-radius: 22px; }
+.gate h1 { font-weight: 400; margin: 16px 0 8px; }
+.gate .give-btn { margin-top: 24px; }
+.settings.card { margin-top: 14px; }
+.inline + .inline { margin-top: 10px; }

@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// Paste into Firebase console → Firestore Database → Rules → Publish.
+// Only people with a document in the "allowed" collection (document ID = their
+// lowercase Google email) can read or write. Add family members there by hand.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function allowed() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/allowed/$(request.auth.token.email.lower()));
+    }
+
+    match /allowed/{email} {
+      allow read: if signedIn() && request.auth.token.email.lower() == email;
+    }
+    match /settings/{id} {
+      allow read, write: if allowed();
+    }
+    match /days/{id} {
+      allow read, write: if allowed();
+    }
+    match /cartridges/{id} {
+      allow read, write: if allowed();
+    }
+    match /devices/{id} {
+      allow read, write: if allowed();
+    }
+    // Written only by the reminder job (admin access bypasses these rules).
+    match /reminders/{id} {
+      allow read: if allowed();
+    }
+  }
+}

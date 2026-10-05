@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1d33">
+  <title>Growth Tracker</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <!-- Today view -->
+    <section id="view-today" class="view">
+      <header class="topbar">
+        <button class="nav-btn" id="prev-day" aria-label="Previous day">‹</button>
+        <div class="date-block">
+          <div id="date-label" class="date-label"></div>
+          <div id="day-label" class="day-label"></div>
+        </div>
+        <button class="nav-btn" id="next-day" aria-label="Next day">›</button>
+      </header>
+
+      <div class="hero" id="hero">
+        <div class="hero-caption" id="hero-caption">Tonight's dose</div>
+        <div class="hero-dose"><span id="hero-value">–</span><span class="hero-unit" id="hero-unit">mg</span></div>
+        <div class="hero-sub" id="hero-sub"></div>
+      </div>
+
+      <button id="give-btn" class="give-btn"></button>
+      <button id="skip-btn" class="link-btn"></button>
+
+      <div class="cards">
+        <div class="card" id="cartridge-card">
+          <div class="card-title">Cartridge</div>
+          <div class="cart-row">
+            <div class="cart-big"><span id="cart-left">–</span> <small>mg left</small></div>
+            <div class="cart-doses" id="cart-doses"></div>
+          </div>
+          <div class="bar"><div class="bar-fill" id="cart-bar"></div></div>
+          <div class="cart-warn" id="cart-warn"></div>
+          <button class="small-btn" id="new-cart-btn">Started a new cartridge</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Next 7 days</div>
+          <div class="forecast" id="forecast"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Recent history</div>
+          <ul class="history" id="history"></ul>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <button class="link-btn" id="open-settings">Settings &amp; backup</button>
+      </footer>
+    </section>
+
+    <!-- Settings view -->
+    <section id="view-settings" class="view hidden">
+      <header class="topbar">
+        <button class="nav-btn" id="close-settings" aria-label="Back">‹</button>
+        <div class="date-block"><div class="date-label">Settings</div></div>
+        <span class="nav-btn"></span>
+      </header>
+      <form id="settings-form" class="settings">
+        <label>Name <input name="name" type="text" placeholder="e.g. Jasper"></label>
+        <label>First injection date <input name="startDate" type="date" required></label>
+        <label>First dose (mg) <input name="doseA" type="number" step="0.1" min="0" required></label>
+        <label>Alternate dose (mg) <input name="doseB" type="number" step="0.1" min="0" required></label>
+        <label>Rest night (no injection)
+          <select name="restDay">
+            <option value="0">Sunday</option><option value="1">Monday</option>
+            <option value="2">Tuesday</option><option value="3">Wednesday</option>
+            <option value="4">Thursday</option><option value="5">Friday</option>
+            <option value="6">Saturday</option>
+          </select>
+        </label>
+        <label>Cartridge size (mg) <input name="cartridgeMg" type="number" step="0.1" min="0" required></label>
+        <button type="submit" class="give-btn">Save</button>
+      </form>
+
+      <div class="card">
+        <div class="card-title">Adjust current cartridge</div>
+        <p class="muted">If the pen shows a different amount, set what's actually left.</p>
+        <div class="inline">
+          <input id="adjust-left" type="number" step="0.1" min="0" placeholder="mg left">
+          <button class="small-btn" id="adjust-btn">Set</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Backup</div>
+        <p class="muted">Data is stored only on this phone. Export a backup now and then.</p>
+        <div class="inline">
+          <button class="small-btn" id="export-btn">Export</button>
+          <label class="small-btn file-btn">Import<input id="import-file" type="file" accept="application/json" hidden></label>
+        </div>
+      </div>
+      <p class="muted center" id="version"></p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="schedule.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

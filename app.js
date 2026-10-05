@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.4.0';
+  const VERSION = '0.5.0';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -10,6 +10,9 @@
   const store = await window.Store.create();
   let viewDate = S.localToday();
   let selectedSite = null; // site chosen in the picker for viewDate
+  let selectedBy = null;   // who gave it, chosen in the picker for viewDate
+  let editBy = null;       // who gave it, in the time/person editor
+  const CAREGIVERS = ['Julian', 'Jen', 'Jasper'];
   let settingsOpen = false;
   let editingTime = false; // time editor open for viewDate
 
@@ -148,10 +151,47 @@
     }
 
     renderSitePicker(showPicker, last);
+    renderByPicker(showPicker);
     renderCartridge(today);
     renderSupplies(today);
     renderForecast(today, plans);
     renderHistory(today, plans);
+  }
+
+  // Names to offer: the family list plus any other name already on an entry.
+  function byOptions(extra) {
+    const names = [...CAREGIVERS];
+    for (const n of [extra, ...Object.values(store.state.log).map((e) => e.by)]) {
+      if (n && !names.some((x) => x.toLowerCase() === n.toLowerCase())) names.push(n);
+    }
+    return names;
+  }
+  function defaultBy() {
+    const me = byName().toLowerCase();
+    const match = CAREGIVERS.find((n) => n.toLowerCase() === me);
+    if (match) return match;
+    let best = null;
+    for (const [iso, e] of Object.entries(store.state.log)) {
+      if (e.by && (!best || iso > best.iso)) best = { iso, by: e.by };
+    }
+    return best ? best.by : null;
+  }
+  function renderByChips(box, selected, pick, extra) {
+    box.innerHTML = '';
+    for (const n of byOptions(extra)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip' + (n === selected ? ' on' : '');
+      b.textContent = n;
+      b.addEventListener('click', () => pick(n));
+      box.appendChild(b);
+    }
+  }
+  function renderByPicker(visible) {
+    $('by-picker').classList.toggle('hidden', !visible);
+    if (!visible) return;
+    if (!selectedBy) selectedBy = defaultBy();
+    renderByChips($('by-chips'), selectedBy, (n) => { selectedBy = n; renderToday(); });
   }
 
   function renderSitePicker(visible, last) {
@@ -268,6 +308,7 @@
   function go(d) {
     viewDate = d;
     selectedSite = null;
+    selectedBy = null;
     editingTime = false;
     renderToday();
   }
@@ -286,6 +327,7 @@
       run(store.setDay(viewDate, null));
       return;
     }
+    if (!selectedBy) return toast('Pick who gave it');
     const c = S.cartridgeStatus(state);
     if (c.left + 1e-6 < plan.dose &&
         !confirm(`The cartridge only shows ${fmt(c.left)} mg left. Log this ${fmt(plan.dose)} mg dose anyway?`)) return;
@@ -296,23 +338,25 @@
       at: viewDate < S.localToday() ? atFor(viewDate, state.settings.reminderTime || '20:00') : new Date().toISOString(),
       cartridgeId: c.cartridge ? c.cartridge.id : null,
       site: selectedSite || S.nextSite(S.lastSite(state.log, viewDate)),
+      by: selectedBy,
     };
-    if (byName()) e.by = byName();
     run(store.setDay(viewDate, e));
-    toast(`Logged ${fmt(plan.dose)} mg · ${e.site}`);
+    toast(`Logged ${fmt(plan.dose)} mg · ${e.site} · ${e.by}`);
   }
 
   function onEditTime() {
     const entry = store.state.log[viewDate];
     $('time-input').value = entry && entry.at ? hhmmOf(entry.at) : (store.state.settings.reminderTime || '20:00');
-    $('by-input').value = (entry && entry.by) || '';
-    // Suggest names already used on entries, plus the signed-in person.
-    const names = new Set(Object.values(store.state.log).map((e) => e.by).filter(Boolean));
-    if (byName()) names.add(byName());
-    $('by-names').innerHTML = [...names].sort().map((n) => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
+    editBy = (entry && entry.by) || null;
+    renderEditBy();
     editingTime = true;
     renderToday();
     $('time-input').focus();
+  }
+
+  function renderEditBy() {
+    const entry = store.state.log[viewDate];
+    renderByChips($('by-edit-chips'), editBy, (n) => { editBy = n; renderEditBy(); }, entry && entry.by);
   }
 
   function onSaveTime() {
@@ -320,9 +364,8 @@
     const v = $('time-input').value;
     if (!entry || !v) return toast('Pick a time');
     editingTime = false;
-    const by = $('by-input').value.trim();
     const updated = { ...entry, at: atFor(viewDate, v) };
-    if (by) updated.by = by; else delete updated.by;
+    if (editBy) updated.by = editBy; else delete updated.by;
     run(store.setDay(viewDate, updated), 'Saved');
     renderToday();
   }
@@ -510,7 +553,7 @@
 
   // Jump back to today when the app is reopened on a new day.
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && viewDate !== S.localToday()) { viewDate = S.localToday(); selectedSite = null; editingTime = false; render(); }
+    if (!document.hidden && viewDate !== S.localToday()) { viewDate = S.localToday(); selectedSite = null; selectedBy = null; editingTime = false; render(); }
   });
 
   store.onChange(render);

@@ -167,3 +167,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font: inherit; font-size: 18px; color: var(--text); background: var(--card);
   border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 10px; color-scheme: dark;
 }
+
+.chips.three { grid-template-columns: repeat(3, 1fr); }
+.field-label { font-size: 14px; color: var(--muted); }

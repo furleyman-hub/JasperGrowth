@@ -39,6 +39,11 @@
         <div class="hero-site" id="hero-site"></div>
       </div>
 
+      <div id="by-picker" class="site-picker">
+        <div class="card-title">Given by</div>
+        <div class="chips three" id="by-chips"></div>
+      </div>
+
       <div id="site-picker" class="site-picker">
         <div class="card-title">Injection site</div>
         <div class="chips" id="site-chips"></div>
@@ -49,8 +54,8 @@
       <button id="time-btn" class="link-btn hidden">Change time or who gave it</button>
       <div id="time-edit" class="time-edit hidden">
         <label>Time given <input type="time" id="time-input"></label>
-        <label>Given by <input type="text" id="by-input" list="by-names" maxlength="30" placeholder="Name" autocomplete="off"></label>
-        <datalist id="by-names"></datalist>
+        <div class="field-label">Given by</div>
+        <div class="chips three" id="by-edit-chips"></div>
         <div class="inline">
           <button class="small-btn" id="time-save">Save</button>
           <button class="small-btn" id="time-cancel">Cancel</button>

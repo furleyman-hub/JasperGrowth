@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.5.0';
+  const VERSION = '0.6.0';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -12,6 +12,9 @@
   let selectedSite = null; // site chosen in the picker for viewDate
   let selectedBy = null;   // who gave it, chosen in the picker for viewDate
   let editBy = null;       // who gave it, in the time/person editor
+  let tab = 'today';       // 'today' | 'growth'
+  let editingHeight = null; // null | 'new' | height id
+  let chartSel = null;     // selected measurement id on the chart
   const CAREGIVERS = ['Julian', 'Jen', 'Jasper'];
   let settingsOpen = false;
   let editingTime = false; // time editor open for viewDate
@@ -42,7 +45,11 @@
   const timeOf = (isoTs) => new Date(isoTs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   function show(view) {
-    for (const v of ['view-gate', 'view-today', 'view-settings']) $(v).classList.toggle('hidden', v !== view);
+    for (const v of ['view-gate', 'view-today', 'view-growth', 'view-settings']) $(v).classList.toggle('hidden', v !== view);
+    const main = view === 'view-today' || view === 'view-growth';
+    $('tabs').classList.toggle('hidden', !main);
+    document.body.classList.toggle('has-tabs', main);
+    for (const b of document.querySelectorAll('.tab')) b.classList.toggle('on', b.dataset.tab === (view === 'view-growth' ? 'growth' : 'today'));
   }
 
   function run(promise, okMsg) {
@@ -55,6 +62,7 @@
   function render() {
     if (store.status !== 'ready') return renderGate();
     if (settingsOpen) { show('view-settings'); return renderSettingsStatus(); }
+    if (tab === 'growth') { show('view-growth'); return renderGrowth(); }
     show('view-today');
     renderToday();
   }
@@ -433,6 +441,185 @@
     $('adjust-needles').value = '';
   }
 
+  // ---------- growth ----------
+  const unitOf = () => store.state.settings.heightUnit === 'cm' ? 'cm' : 'in';
+  const hv = (cm, unit) => Number(S.fromCm(cm, unit).toFixed(unit === 'cm' ? 1 : 2));
+  const hFmt = (cm, unit) => S.fromCm(cm, unit).toFixed(unit === 'cm' ? 1 : 2).replace(/(\.\d)0$/, '$1');
+  const dFmt = (iso) => prettyDate(iso, { month: 'short', day: 'numeric', year: 'numeric' });
+  const sign = (n) => (n > 0 ? '+' : n < 0 ? '−' : '');
+
+  function renderGrowth() {
+    const unit = unitOf();
+    const series = S.heightSeries(store.state.heights);
+    const last = series[series.length - 1];
+    const prev = series[series.length - 2];
+    const name = store.state.settings.name;
+
+    $('growth-sub').textContent = series.length ? `${series.length} measurement${series.length === 1 ? '' : 's'}` : '';
+    $('gh-caption').textContent = cap(name ? `${name}'s latest height` : 'Latest height');
+    $('gh-unit').textContent = last ? unit : '';
+    $('growth-hero').className = last ? 'hero' : 'hero rest';
+    if (!last) {
+      $('gh-value').textContent = '—';
+      $('gh-sub').textContent = 'No measurements yet';
+    } else {
+      $('gh-value').textContent = hFmt(last.cm, unit);
+      let sub = shortDate(last.date);
+      if (prev) {
+        const d = Number(S.fromCm(last.cm - prev.cm, unit).toFixed(2));
+        sub += ` · ${sign(d)}${Math.abs(d)} ${unit} since ${shortDate(prev.date)}`;
+      }
+      $('gh-sub').textContent = sub;
+    }
+
+    renderHeightForm(unit);
+    renderChart(series, unit);
+    renderRate(series, unit);
+
+    const ul = $('height-list');
+    ul.innerHTML = '';
+    if (!series.length) ul.innerHTML = '<li class="rest"><span>Tap "Add measurement" to record the first one.</span></li>';
+    series.slice().reverse().forEach((h, i, arr) => {
+      const older = arr[i + 1];
+      const change = older ? Number(S.fromCm(h.cm - older.cm, unit).toFixed(2)) : null;
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${dFmt(h.date)}${h.note ? ` <small>${h.note.replace(/</g, '&lt;')}</small>` : ''}</span>` +
+        `<span>${hFmt(h.cm, unit)} ${unit}${change === null ? '' : ` <small>${sign(change)}${Math.abs(change)}</small>`}</span>`;
+      li.addEventListener('click', () => { editingHeight = h.id; renderGrowth(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+      ul.appendChild(li);
+    });
+  }
+
+  function renderHeightForm(unit) {
+    const form = $('height-form');
+    form.classList.toggle('hidden', !editingHeight);
+    $('add-height-btn').classList.toggle('hidden', !!editingHeight);
+    if (!editingHeight) return;
+    const existing = editingHeight === 'new' ? null : store.state.heights[editingHeight];
+    $('height-form-title').textContent = existing ? 'Edit measurement' : 'New measurement';
+    $('height-label').textContent = `Height (${unit})`;
+    $('height-delete').classList.toggle('hidden', !existing);
+    // Only fill the fields when the form first opens, not on every re-render.
+    if (form.dataset.for !== String(editingHeight)) {
+      form.dataset.for = String(editingHeight);
+      $('height-date').value = existing ? existing.date : S.localToday();
+      $('height-date').max = S.localToday();
+      $('height-value').value = existing ? hv(existing.cm, unit) : '';
+      $('height-note').value = existing ? existing.note || '' : '';
+    }
+  }
+
+  function onHeightSave(ev) {
+    ev.preventDefault();
+    const unit = unitOf();
+    const date = $('height-date').value;
+    const v = parseFloat($('height-value').value);
+    const cm = S.toCm(v, unit);
+    if (!date || isNaN(v) || cm < 30 || cm > 250) return toast(`Enter a height in ${unit}`);
+    const entry = { date, cm: Math.round(cm * 1000) / 1000 };
+    const note = $('height-note').value.trim();
+    if (note) entry.note = note;
+    const id = editingHeight === 'new' ? 'h' + Date.now() : editingHeight;
+    chartSel = id;
+    run(store.setHeight(id, entry), 'Measurement saved');
+    closeHeightForm();
+  }
+  function closeHeightForm() {
+    editingHeight = null;
+    $('height-form').dataset.for = '';
+    renderGrowth();
+  }
+  function onHeightDelete() {
+    if (!confirm('Delete this measurement?')) return;
+    chartSel = null;
+    run(store.delHeight(editingHeight), 'Deleted');
+    closeHeightForm();
+  }
+
+  function renderRate(series, unit) {
+    const r = S.growthRate(series);
+    if (!r) {
+      $('rate-big').textContent = '–';
+      $('rate-note').textContent = series.length < 2
+        ? 'Add a second measurement to start tracking.'
+        : 'Needs two measurements at least 3 months apart.';
+      return;
+    }
+    const per = Number(S.fromCm(r.cmPerYear, unit).toFixed(1));
+    $('rate-big').innerHTML = `${per} <small>${unit} / year</small>`;
+    $('rate-note').textContent = `Average from ${dFmt(r.from)} to ${dFmt(r.to)}.`;
+  }
+
+  // Line chart of height over time. One series, so no legend; the latest value is
+  // labeled directly and a tap/hover on any point shows its date and value above.
+  function renderChart(series, unit) {
+    const box = $('chart');
+    const readout = $('chart-readout');
+    if (!series.length) {
+      box.innerHTML = '';
+      readout.textContent = 'No measurements yet';
+      return;
+    }
+    const W = 340, H = 210, L = 40, R = 18, T = 22, B = 30;
+    const DAY = 864e5;
+    const pts = series.map((h) => ({ ...h, v: S.fromCm(h.cm, unit), t: Date.parse(h.date + 'T00:00:00Z') }));
+    let t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+    if (t1 === t0) { t0 -= 15 * DAY; t1 += 15 * DAY; }
+    const vmin = Math.min(...pts.map((p) => p.v));
+    const vmax = Math.max(...pts.map((p) => p.v));
+    const span = Math.max(vmax - vmin, unit === 'cm' ? 4 : 1.5);
+    const raw = span / 4, mag = 10 ** Math.floor(Math.log10(raw)), f = raw / mag;
+    const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * mag;
+    const ymin = Math.floor((vmin - span * 0.15) / step) * step;
+    const ymax = Math.ceil((vmax + span * 0.15) / step) * step;
+    const X = (t) => L + ((t - t0) / (t1 - t0)) * (W - L - R);
+    const Y = (v) => T + (1 - (v - ymin) / (ymax - ymin)) * (H - T - B);
+
+    let g = '';
+    for (let v = ymin; v <= ymax + 1e-9; v += step) {
+      const y = Y(v).toFixed(1);
+      g += `<line class="ch-grid" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>` +
+           `<text class="ch-tick" x="${L - 6}" y="${(+y + 4).toFixed(1)}" text-anchor="end">${Number(v.toFixed(2))}</text>`;
+    }
+    const xl = pts.length === 1
+      ? `<text class="ch-tick" x="${X(pts[0].t).toFixed(1)}" y="${H - 8}" text-anchor="middle">${dFmt(pts[0].date)}</text>`
+      : `<text class="ch-tick" x="${L}" y="${H - 8}" text-anchor="start">${dFmt(pts[0].date)}</text>` +
+        `<text class="ch-tick" x="${W - R}" y="${H - 8}" text-anchor="end">${dFmt(pts[pts.length - 1].date)}</text>`;
+    const line = pts.length > 1
+      ? `<polyline class="ch-line" points="${pts.map((p) => `${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ')}"/>` : '';
+    const lastP = pts[pts.length - 1];
+    const lx = X(lastP.t), ly = Y(lastP.v);
+    const label = `<text class="ch-label" x="${Math.min(lx, W - R).toFixed(1)}" y="${(ly < T + 14 ? ly + 22 : ly - 12).toFixed(1)}" text-anchor="${lx > W - 60 ? 'end' : 'middle'}">${hFmt(lastP.cm, unit)}</text>`;
+    const dots = pts.map((p, i) =>
+      `<circle class="ch-dot" data-i="${i}" cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="5"/>`).join('');
+    const hits = pts.map((p, i) =>
+      `<circle class="ch-hit" data-i="${i}" cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="18"/>`).join('');
+
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Height over time, ${unit}. ${pts.length} measurements.">` +
+      `${g}${xl}${line}${dots}${label}${hits}</svg>`;
+
+    const select = (i) => {
+      const p = pts[i];
+      chartSel = p.id;
+      readout.innerHTML = `<b>${hFmt(p.cm, unit)} ${unit}</b> · ${dFmt(p.date)}${p.note ? ' · ' + p.note.replace(/</g, '&lt;') : ''}`;
+      box.querySelectorAll('.ch-dot').forEach((d) => d.classList.toggle('sel', Number(d.dataset.i) === i));
+    };
+    box.querySelectorAll('.ch-hit').forEach((h) => {
+      h.addEventListener('pointerenter', () => select(Number(h.dataset.i)));
+      h.addEventListener('click', () => select(Number(h.dataset.i)));
+    });
+    const keep = pts.findIndex((p) => p.id === chartSel);
+    select(keep >= 0 ? keep : pts.length - 1);
+  }
+
+  function setTab(t) {
+    tab = t;
+    editingHeight = null;
+    $('height-form').dataset.for = '';
+    window.scrollTo(0, 0);
+    render();
+  }
+
   // ---------- settings ----------
   function openSettings() {
     settingsOpen = true;
@@ -480,6 +667,7 @@
       doseB: Number(f.doseB.value),
       restDay: Number(f.restDay.value),
       cartridgeMg: Number(f.cartridgeMg.value),
+      heightUnit: f.heightUnit.value,
       reminderTime: f.reminderTime.value || '20:00',
       nextDelivery: f.nextDelivery.value,
       timeZone: window.Store.timeZone(),
@@ -496,8 +684,8 @@
   }
 
   function onExport() {
-    const { settings, log, cartridges } = store.state;
-    const blob = new Blob([JSON.stringify({ settings, log, cartridges }, null, 2)], { type: 'application/json' });
+    const { settings, log, cartridges, heights } = store.state;
+    const blob = new Blob([JSON.stringify({ settings, log, cartridges, heights }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `growth-tracker-backup-${S.localToday()}.json`;
@@ -539,6 +727,12 @@
   $('spare-minus').addEventListener('click', () => onSpare(-1));
   $('spare-plus').addEventListener('click', () => onSpare(1));
   $('open-settings').addEventListener('click', openSettings);
+  $('open-settings-g').addEventListener('click', openSettings);
+  for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => setTab(b.dataset.tab));
+  $('add-height-btn').addEventListener('click', () => { editingHeight = 'new'; renderGrowth(); });
+  $('height-form').addEventListener('submit', onHeightSave);
+  $('height-cancel').addEventListener('click', closeHeightForm);
+  $('height-delete').addEventListener('click', onHeightDelete);
   $('close-settings').addEventListener('click', closeSettings);
   $('settings-form').addEventListener('submit', onSaveSettings);
   $('adjust-btn').addEventListener('click', onAdjust);

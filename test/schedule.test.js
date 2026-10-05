@@ -49,3 +49,23 @@ test('cartridge and needle tracking', () => {
   assert.strictEqual(f.medsThrough, '2026-10-11');
   assert.strictEqual(f.needlesThrough, '2026-10-14');
 });
+
+test('height series sorts by date and converts units', () => {
+  const heights = {
+    b: { date: '2026-07-02', cm: 146 },
+    a: { date: '2026-01-01', cm: 140 },
+  };
+  assert.deepStrictEqual(S.heightSeries(heights).map((h) => h.id), ['a', 'b']);
+  assert.strictEqual(S.toCm(58.5, 'in'), 148.59);
+  assert.strictEqual(Math.round(S.fromCm(148.59, 'in') * 10) / 10, 58.5);
+  assert.strictEqual(S.toCm(150, 'cm'), 150);
+});
+
+test('growth rate needs 90+ days and annualizes', () => {
+  const short = S.heightSeries({ a: { date: '2026-01-01', cm: 140 }, b: { date: '2026-02-01', cm: 141 } });
+  assert.strictEqual(S.growthRate(short), null);
+  assert.strictEqual(S.growthRate(S.heightSeries({ a: { date: '2026-01-01', cm: 140 } })), null);
+  const r = S.growthRate(S.heightSeries({ a: { date: '2026-01-01', cm: 140 }, b: { date: '2026-07-02', cm: 146 } }));
+  assert.strictEqual(r.days, 182);
+  assert.ok(Math.abs(r.cmPerYear - 12.04) < 0.05);
+});

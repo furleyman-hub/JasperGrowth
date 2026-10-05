@@ -114,6 +114,60 @@
       </footer>
     </section>
 
+    <!-- Growth view -->
+    <section id="view-growth" class="view hidden">
+      <header class="topbar">
+        <span class="nav-btn"></span>
+        <div class="date-block">
+          <div class="date-label">Growth</div>
+          <div class="day-label" id="growth-sub"></div>
+        </div>
+        <span class="nav-btn"></span>
+      </header>
+
+      <div class="hero" id="growth-hero">
+        <div class="hero-caption" id="gh-caption">Latest height</div>
+        <div class="hero-dose"><span id="gh-value">–</span><span class="hero-unit" id="gh-unit">in</span></div>
+        <div class="hero-sub" id="gh-sub"></div>
+      </div>
+
+      <button id="add-height-btn" class="give-btn">Add measurement</button>
+
+      <form id="height-form" class="card height-form hidden">
+        <div class="card-title" id="height-form-title">New measurement</div>
+        <label>Date <input type="date" id="height-date" required></label>
+        <label><span id="height-label">Height (in)</span>
+          <input type="number" id="height-value" step="0.01" min="0" inputmode="decimal" required></label>
+        <label>Note (optional) <input type="text" id="height-note" maxlength="60" placeholder="e.g. doctor visit"></label>
+        <div class="inline">
+          <button type="submit" class="small-btn primary">Save</button>
+          <button type="button" class="small-btn" id="height-cancel">Cancel</button>
+          <button type="button" class="small-btn danger hidden" id="height-delete">Delete</button>
+        </div>
+      </form>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Height over time</div>
+          <div class="chart-readout" id="chart-readout"></div>
+          <div id="chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Growth rate</div>
+          <div class="rate-big" id="rate-big">–</div>
+          <div class="muted" id="rate-note"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Measurements</div>
+          <ul class="history" id="height-list"></ul>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <button class="link-btn" id="open-settings-g">Settings</button>
+      </footer>
+    </section>
+
     <!-- Settings view -->
     <section id="view-settings" class="view hidden">
       <header class="topbar">
@@ -149,6 +203,9 @@
           </select>
         </label>
         <label>Cartridge size (mg) <input name="cartridgeMg" type="number" step="0.1" min="0" required></label>
+        <label>Height units
+          <select name="heightUnit"><option value="in">Inches</option><option value="cm">Centimeters</option></select>
+        </label>
         <label>Reminder time (shared) <input name="reminderTime" type="time"></label>
         <label>Next delivery date <input name="nextDelivery" type="date"></label>
         <button type="submit" class="give-btn">Save</button>
@@ -178,6 +235,17 @@
       <p class="muted center" id="version"></p>
     </section>
   </main>
+
+  <nav id="tabs" class="tabs hidden" aria-label="Sections">
+    <button data-tab="today" class="tab on">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+      <span>Today</span>
+    </button>
+    <button data-tab="growth" class="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg>
+      <span>Growth</span>
+    </button>
+  </nav>
 
   <div id="toast" class="toast"></div>
   <script src="firebase-config.js"></script>

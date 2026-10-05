@@ -170,3 +170,47 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .chips.three { grid-template-columns: repeat(3, 1fr); }
 .field-label { font-size: 14px; color: var(--muted); }
+
+/* Bottom tabs */
+body.has-tabs #app { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; justify-content: center; gap: 8px;
+  padding: 6px 16px calc(6px + env(safe-area-inset-bottom));
+  background: rgba(11, 29, 51, 0.94); backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tab {
+  flex: 1; max-width: 220px; min-height: 52px; border: 0; background: transparent; border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--muted); font-size: 12px;
+}
+.tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tab.on { color: var(--accent); background: rgba(79, 195, 247, 0.12); }
+.toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
+
+/* Growth */
+.height-form { display: grid; gap: 12px; margin: 0 0 14px; }
+.height-form label { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+.height-form input {
+  font: inherit; font-size: 17px; color: var(--text); background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 12px; color-scheme: dark;
+}
+.height-form .inline { flex-wrap: wrap; }
+.small-btn.primary { background: var(--accent); border-color: var(--accent); color: #062033; font-weight: 700; }
+.small-btn.danger { color: var(--bad); border-color: rgba(255, 122, 122, 0.4); margin-left: auto; }
+.chart-readout { font-size: 15px; color: var(--muted); min-height: 22px; margin-bottom: 4px; }
+.chart-readout b { color: var(--text); font-weight: 600; font-size: 17px; }
+#chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.ch-grid { stroke: rgba(255, 255, 255, 0.08); stroke-width: 1; }
+.ch-tick { fill: var(--muted); font-size: 11px; }
+.ch-label { fill: var(--text); font-size: 13px; font-weight: 600; }
+.ch-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ch-dot { fill: var(--accent); stroke: #1c2e48; stroke-width: 2; }
+.ch-dot.sel { r: 7; stroke: var(--text); }
+.ch-hit { fill: transparent; cursor: pointer; }
+.rate-big { font-size: 34px; font-weight: 300; }
+.rate-big small { font-size: 15px; color: var(--muted); }
+
+.toast { opacity: 0; visibility: hidden; transition: transform 0.25s, opacity 0.25s, visibility 0.25s; }
+.toast.show { opacity: 1; visibility: visible; }

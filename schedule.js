@@ -150,7 +150,30 @@
     return out;
   }
 
+  // ---- height tracking (heights are stored in cm: { id: { date, cm, note } }) ----
+  const CM_PER_IN = 2.54;
+  const toCm = (v, unit) => (unit === 'cm' ? v : v * CM_PER_IN);
+  const fromCm = (cm, unit) => (unit === 'cm' ? cm : cm / CM_PER_IN);
+
+  function heightSeries(heights) {
+    return Object.entries(heights || {})
+      .map(([id, h]) => ({ id, ...h }))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
+  }
+
+  // Average growth in cm/year from the first to the latest measurement.
+  // Needs at least 90 days between them; shorter spans are too noisy to annualize.
+  function growthRate(series) {
+    if (series.length < 2) return null;
+    const first = series[0];
+    const last = series[series.length - 1];
+    const days = diffDays(first.date, last.date);
+    if (days < 90) return null;
+    return { cmPerYear: ((last.cm - first.cm) / days) * 365.25, days, from: first.date, to: last.date };
+  }
+
   const api = {
+    CM_PER_IN, toCm, fromCm, heightSeries, growthRate,
     SITES, addDays, diffDays, weekday, localToday, round2,
     computePlans, planFor, currentCartridge, cartridgeStatus, needlesLeft, lastSite, nextSite, forecast,
   };

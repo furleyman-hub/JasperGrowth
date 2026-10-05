@@ -25,6 +25,9 @@ service cloud.firestore {
     match /cartridges/{id} {
       allow read, write: if allowed();
     }
+    match /heights/{id} {
+      allow read, write: if allowed();
+    }
     match /devices/{id} {
       allow read, write: if allowed();
     }

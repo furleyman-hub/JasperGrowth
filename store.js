@@ -20,6 +20,7 @@
     spareCartridges: 0,
     needles: null, // { count, asOf }
     nextDelivery: '',
+    heightUnit: 'in',
   };
   const DEFAULT_CARTRIDGE = { id: 'c1', mg: 12, startedAt: '2026-10-04T00:00:00', adjust: 0 };
 
@@ -29,10 +30,11 @@
       if (raw) {
         const d = JSON.parse(raw);
         d.settings = { ...DEFAULT_SETTINGS, ...d.settings };
+        d.heights = d.heights || {};
         return d;
       }
     } catch (e) { /* use defaults */ }
-    return { settings: { ...DEFAULT_SETTINGS }, log: {}, cartridges: [{ ...DEFAULT_CARTRIDGE }] };
+    return { settings: { ...DEFAULT_SETTINGS }, log: {}, cartridges: [{ ...DEFAULT_CARTRIDGE }], heights: {} };
   }
 
   function makeLocal() {
@@ -51,9 +53,11 @@
       onChange(f) { subs.push(f); },
       async setSettings(p) { state.settings = { ...state.settings, ...p }; save(); },
       async setDay(iso, e) { if (e) state.log[iso] = e; else delete state.log[iso]; save(); },
+      async setHeight(id, h) { state.heights[id] = h; save(); },
+      async delHeight(id) { delete state.heights[id]; save(); },
       async addCartridge(c) { state.cartridges.push(c); save(); },
       async updateCartridge(id, p) { Object.assign(state.cartridges.find((c) => c.id === id), p); save(); },
-      async replaceAll(d) { state = d; save(); },
+      async replaceAll(d) { state = { ...d, settings: { ...DEFAULT_SETTINGS, ...d.settings }, heights: d.heights || {} }; save(); },
     };
   }
 
@@ -75,7 +79,7 @@
       db = fs.getFirestore(app);
     }
 
-    const st = { settings: { ...DEFAULT_SETTINGS }, log: {}, cartridges: [] };
+    const st = { settings: { ...DEFAULT_SETTINGS }, log: {}, cartridges: [], heights: {} };
     const subs = [];
     const emit = () => subs.forEach((f) => f());
     let unsubs = [];
@@ -110,6 +114,8 @@
         const { id, ...rest } = c;
         return fs.setDoc(fs.doc(db, 'cartridges', id), rest);
       },
+      setHeight(id, h) { return fs.setDoc(fs.doc(db, 'heights', id), h); },
+      delHeight(id) { return fs.deleteDoc(fs.doc(db, 'heights', id)); },
       updateCartridge(id, p) { return fs.setDoc(fs.doc(db, 'cartridges', id), p, { merge: true }); },
 
       async enableReminders() {
@@ -151,6 +157,7 @@
       for (const [iso, e] of Object.entries(local.log)) batch.set(fs.doc(db, 'days', iso), e);
       const carts = local.cartridges.length ? local.cartridges : [DEFAULT_CARTRIDGE];
       for (const { id, ...rest } of carts) batch.set(fs.doc(db, 'cartridges', id), rest);
+      for (const [id, h] of Object.entries(local.heights || {})) batch.set(fs.doc(db, 'heights', id), h);
       await batch.commit();
     }
 
@@ -194,6 +201,11 @@
         st.cartridges = qs.docs
           .map((d) => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (a.startedAt < b.startedAt ? -1 : 1));
+        emit();
+      }, fail));
+      unsubs.push(fs.onSnapshot(fs.collection(db, 'heights'), (qs) => {
+        st.heights = {};
+        qs.forEach((d) => { st.heights[d.id] = d.data(); });
         emit();
       }, fail));
     });

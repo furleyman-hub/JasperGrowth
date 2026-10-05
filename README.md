@@ -8,6 +8,7 @@ A phone app (installable web app / PWA) for tracking daily growth hormone inject
 - Injection site picker with rotation (suggests the next site) and "last site used" on the day view
 - Cartridge tracking: mg left, doses left, warning when the next dose won't fit
 - Supplies: needles (1 per dose, count can be corrected), spare cartridges, next delivery date, "medicine lasts through" estimate
+- **Growth tab**: latest height shown big, a height-over-time chart (tap a point for its value), average growth rate, and a measurement list you can edit or delete. Inches or centimeters in Settings
 - Shared records via Firebase (each entry shows who logged it), offline support
 - Evening reminder notifications if the dose hasn't been logged (plus one follow-up 2 hours later)
 
@@ -25,7 +26,7 @@ injection night. A night that's simply not logged is assumed given (it's flagged
 | `schedule.js` | Dose/cartridge/supply logic (shared with the reminder job, tested in `test/`) |
 | `store.js` | Storage: Firebase when configured, otherwise this phone only |
 | `firebase-config.js` | Firebase web config + VAPID key (public values) |
-| `firestore.rules` | Database security rules (paste into Firebase console) |
+| `firestore.rules` | Database security rules (paste into Firebase console again whenever this file changes) |
 | `sw.js` | Offline cache + notification display |
 | `.github/workflows/reminder.yml`, `.github/scripts/remind.cjs` | Scheduled reminder sender |
 

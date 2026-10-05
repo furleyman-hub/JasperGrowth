@@ -155,6 +155,22 @@
   const toCm = (v, unit) => (unit === 'cm' ? v : v * CM_PER_IN);
   const fromCm = (cm, unit) => (unit === 'cm' ? cm : cm / CM_PER_IN);
 
+  // Parse a typed length: "59.125", "59 1/8", "59-1/8", "59⅛", "1/2". Returns NaN if unreadable.
+  const GLYPHS = { '½': 1 / 2, '¼': 1 / 4, '¾': 3 / 4, '⅛': 1 / 8, '⅜': 3 / 8, '⅝': 5 / 8, '⅞': 7 / 8 };
+  function parseLength(text) {
+    const t = String(text == null ? '' : text).trim().replace(/[”″"]|in(ches)?$/gi, '').trim();
+    const m = t.match(/^(\d+(?:\.\d+)?)?\s*[- ]?\s*(?:(\d+)\s*\/\s*(\d+)|([½¼¾⅛⅜⅝⅞]))?$/);
+    if (!m || (m[1] === undefined && m[2] === undefined && m[4] === undefined)) return NaN;
+    let v = m[1] !== undefined ? parseFloat(m[1]) : 0;
+    if (m[2] !== undefined) {
+      if (Number(m[3]) === 0) return NaN;
+      v += Number(m[2]) / Number(m[3]);
+    } else if (m[4] !== undefined) {
+      v += GLYPHS[m[4]];
+    }
+    return v;
+  }
+
   function heightSeries(heights) {
     return Object.entries(heights || {})
       .map(([id, h]) => ({ id, ...h }))
@@ -173,7 +189,7 @@
   }
 
   const api = {
-    CM_PER_IN, toCm, fromCm, heightSeries, growthRate,
+    CM_PER_IN, toCm, fromCm, parseLength, heightSeries, growthRate,
     SITES, addDays, diffDays, weekday, localToday, round2,
     computePlans, planFor, currentCartridge, cartridgeStatus, needlesLeft, lastSite, nextSite, forecast,
   };

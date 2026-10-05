@@ -61,6 +61,14 @@ test('height series sorts by date and converts units', () => {
   assert.strictEqual(S.toCm(150, 'cm'), 150);
 });
 
+test('parseLength reads decimals and fractions', () => {
+  for (const [text, want] of [['59.125', 59.125], ['59 1/8', 59.125], ['59-1/8', 59.125], ['59⅛', 59.125], ['59 ⅛', 59.125],
+    ['58.5', 58.5], ['58½', 58.5], ['1/2', 0.5], ['56', 56], ['59 1/8 in', 59.125], [' 60 ', 60]]) {
+    assert.ok(Math.abs(S.parseLength(text) - want) < 1e-9, text);
+  }
+  for (const bad of ['', 'abc', '5 1/0', '1/', '--', null]) assert.ok(Number.isNaN(S.parseLength(bad)), String(bad));
+});
+
 test('growth rate needs 90+ days and annualizes', () => {
   const short = S.heightSeries({ a: { date: '2026-01-01', cm: 140 }, b: { date: '2026-02-01', cm: 141 } });
   assert.strictEqual(S.growthRate(short), null);

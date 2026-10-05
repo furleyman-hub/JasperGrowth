@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.6.0';
+  const VERSION = '0.6.1';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -443,8 +443,16 @@
 
   // ---------- growth ----------
   const unitOf = () => store.state.settings.heightUnit === 'cm' ? 'cm' : 'in';
-  const hv = (cm, unit) => Number(S.fromCm(cm, unit).toFixed(unit === 'cm' ? 1 : 2));
-  const hFmt = (cm, unit) => S.fromCm(cm, unit).toFixed(unit === 'cm' ? 1 : 2).replace(/(\.\d)0$/, '$1');
+  const hv = (cm, unit) => Number(S.fromCm(cm, unit).toFixed(unit === 'cm' ? 1 : 3));
+  // Inches show as fractions when they land on an eighth (59⅛, 58½, 56); otherwise two decimals.
+  const EIGHTHS = ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'];
+  function hFmt(cm, unit) {
+    const v = S.fromCm(cm, unit);
+    if (unit === 'cm') return v.toFixed(1);
+    const e = Math.round(v * 8);
+    if (Math.abs(v - e / 8) < 0.004) return `${Math.floor(e / 8)}${EIGHTHS[e % 8]}`;
+    return v.toFixed(2);
+  }
   const dFmt = (iso) => prettyDate(iso, { month: 'short', day: 'numeric', year: 'numeric' });
   const sign = (n) => (n > 0 ? '+' : n < 0 ? '−' : '');
 
@@ -498,6 +506,7 @@
     const existing = editingHeight === 'new' ? null : store.state.heights[editingHeight];
     $('height-form-title').textContent = existing ? 'Edit measurement' : 'New measurement';
     $('height-label').textContent = `Height (${unit})`;
+    $('height-value').placeholder = unit === 'in' ? 'e.g. 59 1/8 or 59.125' : 'e.g. 150.5';
     $('height-delete').classList.toggle('hidden', !existing);
     // Only fill the fields when the form first opens, not on every re-render.
     if (form.dataset.for !== String(editingHeight)) {
@@ -513,9 +522,9 @@
     ev.preventDefault();
     const unit = unitOf();
     const date = $('height-date').value;
-    const v = parseFloat($('height-value').value);
+    const v = S.parseLength($('height-value').value);
     const cm = S.toCm(v, unit);
-    if (!date || isNaN(v) || cm < 30 || cm > 250) return toast(`Enter a height in ${unit}`);
+    if (!date || isNaN(v) || cm < 30 || cm > 250) return toast(unit === 'in' ? 'Enter a height in inches, like 59 1/8' : 'Enter a height in cm, like 150.5');
     const entry = { date, cm: Math.round(cm * 1000) / 1000 };
     const note = $('height-note').value.trim();
     if (note) entry.note = note;

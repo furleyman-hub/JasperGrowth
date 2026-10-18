@@ -24,9 +24,36 @@ test('missed dose is carried to the next night', () => {
   assert.deepStrictEqual(doses(log, '2026-10-04', 6), [1.6, 1.8, 1.6, 1.6, 1.8, 1.6]);
 });
 
-test('missed dose before rest night carries over the weekend', () => {
+test('missed Friday shifts the injection into the Saturday rest night', () => {
   const log = { '2026-10-09': { status: 'skipped' } }; // Fri 1.8 missed
-  assert.deepStrictEqual(doses(log, '2026-10-09', 3), [1.8, 'rest', 1.8]);
+  // Fri missed, Sat takes the 1.8, Sun continues the alternation (1.6), Mon 1.8
+  assert.deepStrictEqual(doses(log, '2026-10-09', 4), [1.8, 1.8, 1.6, 1.8]);
+  const sat = S.computePlans(settings, log, '2026-10-10').get('2026-10-10');
+  assert.strictEqual(sat.movedFrom, '2026-10-09');
+  assert.strictEqual(sat.injectionNumber, 6);
+});
+
+test('rest night stays a rest night unless the night before was missed', () => {
+  assert.deepStrictEqual(doses({ '2026-10-09': { status: 'given', mg: 1.8 } }, '2026-10-09', 3), [1.8, 'rest', 1.6]);
+  // Thursday missed: Friday carries it, Saturday is still rest
+  assert.deepStrictEqual(doses({ '2026-10-08': { status: 'skipped' } }, '2026-10-08', 4), [1.6, 1.6, 'rest', 1.8]);
+});
+
+test('Saturday dose after a missed Friday is logged and the week stays aligned', () => {
+  const log = {
+    '2026-10-09': { status: 'skipped' },
+    '2026-10-10': { status: 'given', mg: 1.8 },
+  };
+  assert.deepStrictEqual(doses(log, '2026-10-09', 5), [1.8, 1.8, 1.6, 1.8, 1.6]);
+  // the following Saturday is a rest night again
+  assert.strictEqual(S.computePlans(settings, log, '2026-10-17').get('2026-10-17').rest, true);
+});
+
+test('a dose logged on a rest night is honored', () => {
+  const log = { '2026-10-10': { status: 'given', mg: 1.8 } };
+  const p = S.computePlans(settings, log, '2026-10-11');
+  assert.strictEqual(p.get('2026-10-10').scheduled, true);
+  assert.strictEqual(p.get('2026-10-10').onRestNight, true);
 });
 
 test('cartridge and needle tracking', () => {

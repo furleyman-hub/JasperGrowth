@@ -4,7 +4,7 @@ A phone app (installable web app / PWA) for tracking daily growth hormone inject
 
 - **Today view**: tonight's dose shown big, like the temperature in a weather app
 - Alternating doses (1.6 / 1.8 mg), 6 nights a week, Saturday rest night (configurable)
-- **Missed doses carry over**: if a night is marked missed, the next injection night gets that same dose and the alternation continues from there
+- **Missed doses carry over**: if a night is marked missed, the next night gets that same dose (even if it's the rest night) and the alternation continues from there
 - Injection site picker with rotation (suggests the next site) and "last site used" on the day view
 - Cartridge tracking: mg left, doses left, warning when the next dose won't fit
 - Supplies: needles (1 per dose, count can be corrected), spare cartridges, next delivery date, "medicine lasts through" estimate
@@ -15,8 +15,9 @@ A phone app (installable web app / PWA) for tracking daily growth hormone inject
 ## How the dose schedule works
 
 Day 1 = first injection date. Dose #1 = "first dose" setting, then alternate.
-Rest nights don't affect the alternation. A night marked **missed** pushes its dose to the next
-injection night. A night that's simply not logged is assumed given (it's flagged "not logged" in history).
+Rest nights don't affect the alternation. A night marked **missed** pushes its dose to the next night.
+If that next night is the rest night, **the rest night becomes an injection night** (for example, Friday missed means Saturday takes
+Friday's dose and Sunday continues the alternation). A rest night with a dose logged on it is also treated as an injection night. A night that's simply not logged is assumed given (it's flagged "not logged" in history).
 
 ## Files
 

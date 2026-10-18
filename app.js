@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.6.1';
+  const VERSION = '0.7.0';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -124,7 +124,8 @@
       $('hero-caption').textContent = cap(viewDate === today ? `${who} dose tonight` : `${who} dose`);
       $('hero-value').textContent = fmt(plan.dose);
       $('hero-unit').textContent = 'mg';
-      $('hero-sub').textContent = `Injection #${plan.injectionNumber}`;
+      const moved = plan.movedFrom ? ` · moved from ${DOW[S.weekday(plan.movedFrom)]}` : plan.onRestNight ? ' · on a rest night' : '';
+      $('hero-sub').textContent = `Injection #${plan.injectionNumber}${moved}`;
 
       if (entry && entry.status === 'given') {
         hero.classList.add('done');
@@ -146,7 +147,7 @@
       } else {
         if (viewDate < today) {
           hero.classList.add('missed');
-          $('hero-sub').textContent = `Injection #${plan.injectionNumber} · not logged`;
+          $('hero-sub').textContent = `Injection #${plan.injectionNumber}${moved} · not logged`;
         }
         $('hero-site').textContent = lastText;
         give.textContent = isFuture ? 'Upcoming' : `Mark ${fmt(plan.dose)} mg given`;

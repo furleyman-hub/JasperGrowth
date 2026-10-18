@@ -39,8 +39,11 @@
 
   // Plan every day from the start date through untilIso.
   // Doses alternate A, B, A, B... by injections actually given: a night marked
-  // "missed" gets its dose carried to the next scheduled night, and the
-  // alternation continues from there. Unlogged nights are assumed given.
+  // "missed" gets its dose carried to the next night, and the alternation
+  // continues from there. If that next night is the weekly rest night, the rest
+  // night becomes an injection night (the schedule shifts by one day).
+  // A dose logged on a rest night also makes it an injection night.
+  // Unlogged nights are assumed given.
   function computePlans(settings, log, untilIso) {
     const plans = new Map();
     const A = Number(settings.doseA);
@@ -48,14 +51,21 @@
     let next = A;
     let given = 0;
     let day = 1;
+    let prevMissed = false; // the previous night was an injection night marked missed
     for (let d = settings.startDate; d <= untilIso; d = addDays(d, 1), day++) {
-      if (weekday(d) === Number(settings.restDay)) {
+      const e = log[d];
+      const rest = weekday(d) === Number(settings.restDay);
+      const shifted = rest && prevMissed;
+      if (rest && !shifted && !(e && e.status === 'given')) {
         plans.set(d, { iso: d, dayNumber: day, scheduled: false, rest: true });
+        prevMissed = false;
         continue;
       }
-      plans.set(d, { iso: d, dayNumber: day, scheduled: true, injectionNumber: given + 1, dose: next });
-      const e = log[d];
-      if (e && e.status === 'skipped') continue;
+      const plan = { iso: d, dayNumber: day, scheduled: true, injectionNumber: given + 1, dose: next };
+      if (rest) { plan.onRestNight = true; if (shifted) plan.movedFrom = addDays(d, -1); }
+      plans.set(d, plan);
+      if (e && e.status === 'skipped') { prevMissed = true; continue; }
+      prevMissed = false;
       given++;
       const mg = e && e.status === 'given' ? Number(e.mg) : next;
       next = Math.abs(mg - A) < EPS ? B : A;

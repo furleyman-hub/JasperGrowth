@@ -68,7 +68,8 @@ test('cartridge and needle tracking', () => {
   assert.strictEqual(S.cartridgeStatus(state).left, 8.6);
   assert.strictEqual(S.needlesLeft(state), 8);
   assert.deepStrictEqual(S.lastSite(state.log, '2026-10-06'), { iso: '2026-10-05', site: 'Left thigh' });
-  assert.strictEqual(S.nextSite(S.lastSite(state.log, '2026-10-06')), 'Right belly');
+  // older entries have an area but no corner: continue to the next area
+  assert.strictEqual(S.nextSite(S.lastSite(state.log, '2026-10-06')), 'Stomach · L lower corner');
   const f = S.forecast(state, '2026-10-06');
   // 8.6 mg covers Tue 1.6, Wed 1.8, Thu 1.6, Fri 1.8 (=6.8), leaving 1.8 -> Sun 1.6 too (8.4)
   assert.strictEqual(f.dosesInCartridge, 5);
@@ -103,4 +104,23 @@ test('growth rate needs 90+ days and annualizes', () => {
   const r = S.growthRate(S.heightSeries({ a: { date: '2026-01-01', cm: 140 }, b: { date: '2026-07-02', cm: 146 } }));
   assert.strictEqual(r.days, 182);
   assert.ok(Math.abs(r.cmPerYear - 12.04) < 0.05);
+});
+
+test('injection sites: areas x corners, rotation, and older entries', () => {
+  assert.strictEqual(S.SITES.length, 12);
+  assert.deepStrictEqual(S.SITE_AREAS, ['Right thigh', 'Left thigh', 'Stomach']);
+  assert.deepStrictEqual(S.CORNERS, ['L lower corner', 'R lower corner', 'R upper corner', 'L upper corner']);
+  assert.ok(!S.SITES.some((x) => /belly|arm/i.test(x)));
+  // starts at the first site, cycles areas, then moves to the next corner
+  assert.strictEqual(S.nextSite(null), 'Right thigh · L lower corner');
+  const next = (site) => S.nextSite({ iso: 'x', site });
+  assert.strictEqual(next('Right thigh · L lower corner'), 'Left thigh · L lower corner');
+  assert.strictEqual(next('Left thigh · L lower corner'), 'Stomach · L lower corner');
+  assert.strictEqual(next('Stomach · L lower corner'), 'Right thigh · R lower corner');
+  assert.strictEqual(next('Stomach · L upper corner'), 'Right thigh · L lower corner'); // wraps after 12
+  // older / removed sites
+  assert.strictEqual(next('Right belly'), 'Right thigh · R lower corner');
+  assert.strictEqual(next('Right thigh'), 'Left thigh · L lower corner');
+  assert.strictEqual(next('Left arm'), 'Right thigh · L lower corner');
+  assert.deepStrictEqual(S.parseSite('Stomach · R upper corner'), { area: 'Stomach', corner: 'R upper corner' });
 });

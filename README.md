@@ -5,7 +5,7 @@ A phone app (installable web app / PWA) for tracking daily growth hormone inject
 - **Today view**: tonight's dose shown big, like the temperature in a weather app
 - Alternating doses (1.6 / 1.8 mg), 6 nights a week, Saturday rest night (configurable)
 - **Missed doses carry over**: if a night is marked missed, the next night gets that same dose (even if it's the rest night) and the alternation continues from there
-- Injection site picker with rotation (suggests the next site) and "last site used" on the day view
+- Injection site picker: choose an area (right thigh, left thigh, stomach) and a corner (L/R upper, L/R lower). It suggests the next spot: areas rotate each injection and the corner advances after each full pass, so a spot comes around again after 12 injections. The last site used shows on the day screen
 - Cartridge tracking: mg left, doses left, warning when the next dose won't fit
 - Supplies: needles (1 per dose, count can be corrected), spare cartridges, next delivery date, "medicine lasts through" estimate
 - **Growth tab**: latest height shown big, a height-over-time chart (tap a point for its value), average growth rate, and a measurement list you can edit or delete. Inches or centimeters in Settings

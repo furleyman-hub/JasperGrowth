@@ -5,7 +5,25 @@
   const EPS = 1e-6;
 
   // Rotation order for injection sites.
-  const SITES = ['Right thigh', 'Left thigh', 'Right belly', 'Left belly', 'Right arm', 'Left arm'];
+  // An injection site is an area plus a corner of it, stored as "Stomach · R upper corner".
+  // Suggested rotation: through the three areas, moving to the next corner after each full pass.
+  const SITE_AREAS = ['Right thigh', 'Left thigh', 'Stomach'];
+  const CORNERS = ['L lower corner', 'R lower corner', 'R upper corner', 'L upper corner'];
+  const siteLabel = (area, corner) => `${area} · ${corner}`;
+  const SITES = [];
+  for (const c of CORNERS) for (const a of SITE_AREAS) SITES.push(siteLabel(a, c));
+
+  // Split a stored site into { area, corner }. Older entries ("Right belly", "Left thigh")
+  // map to their area with no corner; areas that no longer exist (arms) give null.
+  function parseSite(site) {
+    const [areaText = '', cornerText] = String(site || '').split(' · ');
+    const t = areaText.toLowerCase();
+    let area = null;
+    if (/right thigh/.test(t)) area = SITE_AREAS[0];
+    else if (/left thigh/.test(t)) area = SITE_AREAS[1];
+    else if (/belly|stomach/.test(t)) area = SITE_AREAS[2];
+    return { area, corner: CORNERS.includes(cornerText) ? cornerText : null };
+  }
 
   // Dates are 'YYYY-MM-DD' strings in local time; arithmetic is done at UTC
   // midnight so daylight-saving changes can't shift a day.
@@ -121,7 +139,9 @@
 
   function nextSite(last) {
     if (!last) return SITES[0];
-    const i = SITES.indexOf(last.site);
+    const { area, corner } = parseSite(last.site);
+    if (!area) return SITES[0];
+    const i = (corner ? CORNERS.indexOf(corner) : 0) * SITE_AREAS.length + SITE_AREAS.indexOf(area);
     return SITES[(i + 1) % SITES.length];
   }
 
@@ -200,7 +220,7 @@
 
   const api = {
     CM_PER_IN, toCm, fromCm, parseLength, heightSeries, growthRate,
-    SITES, addDays, diffDays, weekday, localToday, round2,
+    SITES, SITE_AREAS, CORNERS, siteLabel, parseSite, addDays, diffDays, weekday, localToday, round2,
     computePlans, planFor, currentCartridge, cartridgeStatus, needlesLeft, lastSite, nextSite, forecast,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -214,3 +214,5 @@ body.has-tabs #app { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 
 .toast { opacity: 0; visibility: hidden; transition: transform 0.25s, opacity 0.25s, visibility 0.25s; }
 .toast.show { opacity: 1; visibility: visible; }
+
+.card-title.sub { margin: 14px 0 10px; text-align: center; }

@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.7.0';
+  const VERSION = '0.8.0';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -102,7 +102,7 @@
     $('time-edit').classList.toggle('hidden', !isGiven || !editingTime);
 
     const last = S.lastSite(state.log, viewDate);
-    const lastText = last ? `Last site: ${last.site} · ${relLabel(last.iso) || shortDate(last.iso)}` : '';
+    const lastText = last ? `Last site: ${siteText(last.site)} · ${relLabel(last.iso) || shortDate(last.iso)}` : '';
     $('hero-site').textContent = '';
 
     const who = s.name ? `${s.name}'s` : '';
@@ -132,7 +132,7 @@
         $('hero-value').textContent = fmt(entry.mg);
         const by = entry.by ? ` by ${entry.by}` : '';
         $('hero-sub').textContent = `✓ Given${entry.at ? ' at ' + timeOf(entry.at) : ''}${by}`;
-        $('hero-site').textContent = entry.site ? `Site: ${entry.site}` : lastText;
+        $('hero-site').textContent = entry.site ? `Site: ${siteText(entry.site)}` : lastText;
         give.textContent = 'Undo';
         give.className = 'give-btn secondary';
         skip.hidden = true;
@@ -208,16 +208,37 @@
     if (!visible) return;
     const suggested = S.nextSite(last);
     if (!selectedSite) selectedSite = suggested;
-    const box = $('site-chips');
-    box.innerHTML = '';
-    for (const site of S.SITES) {
+    const sug = S.parseSite(suggested);
+    const sel = S.parseSite(selectedSite);
+    const chip = (text, on, isSuggested, click) => {
       const b = document.createElement('button');
-      b.className = 'chip' + (site === selectedSite ? ' on' : '');
-      b.innerHTML = `${site}${site === suggested ? '<small>suggested</small>' : ''}`;
-      b.addEventListener('click', () => { selectedSite = site; renderToday(); });
-      box.appendChild(b);
+      b.type = 'button';
+      b.className = 'chip' + (on ? ' on' : '');
+      b.innerHTML = `${text}${isSuggested ? '<small>suggested</small>' : ''}`;
+      b.addEventListener('click', click);
+      return b;
+    };
+    const areas = $('area-chips');
+    areas.innerHTML = '';
+    for (const area of S.SITE_AREAS) {
+      areas.appendChild(chip(area, area === sel.area, area === sug.area, () => {
+        selectedSite = S.siteLabel(area, sel.corner || sug.corner);
+        renderToday();
+      }));
+    }
+    // Corners in a 2x2 grid laid out like the area itself: upper row, then lower row.
+    const corners = $('corner-chips');
+    corners.innerHTML = '';
+    for (const corner of ['L upper corner', 'R upper corner', 'L lower corner', 'R lower corner']) {
+      corners.appendChild(chip(corner, corner === sel.corner, corner === sug.corner, () => {
+        selectedSite = S.siteLabel(sel.area || sug.area, corner);
+        renderToday();
+      }));
     }
   }
+
+  // Older entries said "belly"; the app now calls it stomach.
+  const siteText = (site) => String(site || '').replace(/belly/gi, (m) => (m[0] === 'B' ? 'Stomach' : 'stomach'));
 
   function supplyFrom(today) {
     // Count from today, or tomorrow if today's dose is already logged.
@@ -302,7 +323,7 @@
       const li = document.createElement('li');
       let status, cls;
       if (!p.scheduled) { status = 'Rest night'; cls = 'rest'; }
-      else if (e && e.status === 'given') { status = `✓ ${fmt(e.mg)} mg${e.site ? ' · ' + e.site : ''}`; cls = 'given'; }
+      else if (e && e.status === 'given') { status = `✓ ${fmt(e.mg)} mg${e.site ? ' · ' + siteText(e.site) : ''}`; cls = 'given'; }
       else if (e && e.status === 'skipped') { status = `✗ Missed ${fmt(p.dose)} mg`; cls = 'missed'; }
       else if (d === today) { status = `${fmt(p.dose)} mg due`; cls = 'due'; }
       else { status = `? ${fmt(p.dose)} mg not logged`; cls = 'missed'; }

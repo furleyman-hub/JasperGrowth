@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.8.0';
+  const VERSION = '0.9.0';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -96,6 +96,8 @@
     const skip = $('skip-btn');
     give.hidden = skip.hidden = false;
     give.disabled = false;
+    const restBtn = $('rest-btn');
+    restBtn.className = 'link-btn hidden';
     let showPicker = false;
     const isGiven = !!(entry && entry.status === 'given');
     $('time-btn').classList.toggle('hidden', !isGiven || editingTime);
@@ -120,6 +122,9 @@
       $('hero-sub').textContent = 'No injection tonight';
       $('hero-site').textContent = lastText;
       give.hidden = skip.hidden = true;
+      // Turn this one rest night into an injection night (e.g. a make-up dose).
+      restBtn.textContent = `Give a dose this night (${fmt(plan.restDose)} mg)`;
+      restBtn.className = 'give-btn secondary';
     } else {
       $('hero-caption').textContent = cap(viewDate === today ? `${who} dose tonight` : `${who} dose`);
       $('hero-value').textContent = fmt(plan.dose);
@@ -156,6 +161,12 @@
         skip.textContent = 'Mark as missed';
         skip.hidden = isFuture;
         showPicker = !isFuture;
+        if (plan.chosen) {
+          // A rest night turned into an injection night: offer to put it back instead of "missed".
+          skip.hidden = true;
+          restBtn.textContent = 'Back to rest night';
+          restBtn.className = 'link-btn';
+        }
       }
     }
 
@@ -242,7 +253,8 @@
 
   function supplyFrom(today) {
     // Count from today, or tomorrow if today's dose is already logged.
-    return store.state.log[today] ? S.addDays(today, 1) : today;
+    const e = store.state.log[today];
+    return e && (e.status === 'given' || e.status === 'skipped') ? S.addDays(today, 1) : today;
   }
 
   function renderCartridge(today) {
@@ -398,6 +410,19 @@
     if (editBy) updated.by = editBy; else delete updated.by;
     run(store.setDay(viewDate, updated), 'Saved');
     renderToday();
+  }
+
+  // Toggle a rest night into an injection night and back.
+  function onRestToggle() {
+    const state = store.state;
+    const plan = S.planFor(viewDate, state.settings, state.log);
+    if (plan.scheduled) {
+      const e = state.log[viewDate];
+      if (e && e.status === 'given') return;
+      run(store.setDay(viewDate, null), 'Back to a rest night');
+      return;
+    }
+    run(store.setDay(viewDate, { status: 'planned', at: new Date().toISOString() }), 'Injection night added');
   }
 
   function onSkip() {
@@ -750,6 +775,7 @@
   $('date-label').addEventListener('click', () => go(S.localToday()));
   $('give-btn').addEventListener('click', onGive);
   $('skip-btn').addEventListener('click', onSkip);
+  $('rest-btn').addEventListener('click', onRestToggle);
   $('time-btn').addEventListener('click', onEditTime);
   $('time-save').addEventListener('click', onSaveTime);
   $('time-cancel').addEventListener('click', () => { editingTime = false; renderToday(); });

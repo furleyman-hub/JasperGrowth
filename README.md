@@ -17,7 +17,8 @@ A phone app (installable web app / PWA) for tracking daily growth hormone inject
 Day 1 = first injection date. Dose #1 = "first dose" setting, then alternate.
 Rest nights don't affect the alternation. A night marked **missed** pushes its dose to the next night.
 If that next night is the rest night, **the rest night becomes an injection night** (for example, Friday missed means Saturday takes
-Friday's dose and Sunday continues the alternation). A rest night with a dose logged on it is also treated as an injection night. A night that's simply not logged is assumed given (it's flagged "not logged" in history).
+Friday's dose and Sunday continues the alternation). A rest night with a dose logged on it is also treated as an injection night.
+To make any single rest night an injection night (for example a make-up dose), open that day and tap **Give a dose this night**; it takes the next dose in the alternation and the nights after it follow on. **Back to rest night** undoes it. A night that's simply not logged is assumed given (it's flagged "not logged" in history).
 
 ## Files
 

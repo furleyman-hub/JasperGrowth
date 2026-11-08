@@ -31,7 +31,7 @@ async function main() {
   (await db.collection('days').get()).forEach((d) => { log[d.id] = d.data(); });
   const plan = S.planFor(today, settings, log);
   if (!plan || !plan.scheduled) return console.log('No injection scheduled today.');
-  if (log[today]) return console.log(`Already logged: ${log[today].status}.`);
+  if (log[today] && log[today].status !== 'planned') return console.log(`Already logged: ${log[today].status}.`);
 
   const remRef = db.doc(`reminders/${today}`);
   const rem = (await remRef.get()).data() || { count: 0 };

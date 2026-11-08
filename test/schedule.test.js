@@ -124,3 +124,23 @@ test('injection sites: areas x corners, rotation, and older entries', () => {
   assert.strictEqual(next('Left arm'), 'Right thigh · L lower corner');
   assert.deepStrictEqual(S.parseSite('Stomach · R upper corner'), { area: 'Stomach', corner: 'R upper corner' });
 });
+
+test('a rest night can be turned into an injection night and the pattern follows', () => {
+  // Plain week: Sat Oct 10 is a rest night and shows the dose it would take (Fri was 1.8 -> next is 1.6)
+  const plain = S.computePlans(settings, {}, '2026-10-12');
+  assert.strictEqual(plain.get('2026-10-10').rest, true);
+  assert.strictEqual(plain.get('2026-10-10').restDose, 1.6);
+  // Planned (not yet given): Sat becomes an injection night with the next dose, Sun/Mon follow
+  const log = { '2026-10-10': { status: 'planned' } };
+  assert.deepStrictEqual(doses(log, '2026-10-09', 4), [1.8, 1.6, 1.8, 1.6]);
+  const sat = S.computePlans(settings, log, '2026-10-10').get('2026-10-10');
+  assert.strictEqual(sat.scheduled, true);
+  assert.strictEqual(sat.chosen, true);
+  assert.strictEqual(sat.injectionNumber, 7);
+  // Once given, same result; undoing (removing the entry) restores the rest night
+  const given = { '2026-10-10': { status: 'given', mg: 1.6 } };
+  assert.deepStrictEqual(doses(given, '2026-10-09', 4), [1.8, 1.6, 1.8, 1.6]);
+  assert.strictEqual(S.computePlans(settings, {}, '2026-10-10').get('2026-10-10').rest, true);
+  // The next Saturday is a rest night again
+  assert.strictEqual(S.computePlans(settings, log, '2026-10-17').get('2026-10-17').rest, true);
+});

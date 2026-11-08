@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.9.1';
+  const VERSION = '0.9.2';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -546,6 +546,37 @@
     });
   }
 
+  // Text for the height box: "59⅛" when it lands on an eighth of an inch, else a decimal.
+  function prefillLength(cm, unit) {
+    if (unit === 'in') {
+      const v = S.fromCm(cm, 'in');
+      if (Math.abs(v - Math.round(v * 8) / 8) < 0.004) return hFmt(cm, 'in');
+    }
+    return hv(cm, unit);
+  }
+
+  // Fraction buttons: the numeric keypad has no "/", so tap ⅛ ¼ ⅜ ½ ⅝ ¾ ⅞ after the whole number.
+  function renderFractionRow(unit) {
+    const row = $('frac-row');
+    row.classList.toggle('hidden', unit !== 'in');
+    if (unit !== 'in' || row.dataset.built) return;
+    row.dataset.built = '1';
+    EIGHTHS.slice(1).forEach((glyph) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip frac';
+      b.textContent = glyph;
+      b.addEventListener('click', () => {
+        const input = $('height-value');
+        const whole = (input.value.match(/^\s*(\d+)/) || [])[1] || '';
+        const hasThis = input.value.includes(glyph);
+        input.value = hasThis ? whole : `${whole}${glyph}`; // tap again to remove
+        input.focus();
+      });
+      row.appendChild(b);
+    });
+  }
+
   // Open the measurement editor for an existing entry (from the list or the chart readout).
   function openHeightEdit(id) {
     editingHeight = id;
@@ -562,14 +593,15 @@
     const existing = editingHeight === 'new' ? null : store.state.heights[editingHeight];
     $('height-form-title').textContent = existing ? 'Edit measurement' : 'New measurement';
     $('height-label').textContent = `Height (${unit})`;
-    $('height-value').placeholder = unit === 'in' ? 'e.g. 59 1/8 or 59.125' : 'e.g. 150.5';
+    renderFractionRow(unit);
+    $('height-value').placeholder = unit === 'in' ? 'e.g. 59, then tap a fraction' : 'e.g. 150.5';
     $('height-delete').classList.toggle('hidden', !existing);
     // Only fill the fields when the form first opens, not on every re-render.
     if (form.dataset.for !== String(editingHeight)) {
       form.dataset.for = String(editingHeight);
       $('height-date').value = existing ? existing.date : S.localToday();
       $('height-date').max = S.localToday();
-      $('height-value').value = existing ? hv(existing.cm, unit) : '';
+      $('height-value').value = existing ? prefillLength(existing.cm, unit) : '';
       $('height-note').value = existing ? existing.note || '' : '';
     }
   }

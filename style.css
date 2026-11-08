@@ -223,3 +223,6 @@ body.has-tabs #app { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   border: 1px solid rgba(79, 195, 247, 0.45); border-radius: 10px; padding: 4px 10px; min-height: 30px; cursor: pointer;
 }
 .chart-readout .edit-chip { margin-left: 6px; }
+
+.frac-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: -4px; }
+.frac-row .chip.frac { min-height: 44px; padding: 4px 0; font-size: 20px; }

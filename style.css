@@ -226,3 +226,5 @@ body.has-tabs #app { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 
 .frac-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: -4px; }
 .frac-row .chip.frac { min-height: 44px; padding: 4px 0; font-size: 20px; }
+
+#proj-big small { font-size: 15px; color: var(--muted); }

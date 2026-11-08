@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.9.2';
+  const VERSION = '0.10.0';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -530,6 +530,7 @@
     renderHeightForm(unit);
     renderChart(series, unit);
     renderRate(series, unit);
+    renderProjection(series, unit);
 
     const ul = $('height-list');
     ul.innerHTML = '';
@@ -616,7 +617,7 @@
     const entry = { date, cm: Math.round(cm * 1000) / 1000 };
     const note = $('height-note').value.trim();
     if (note) entry.note = note;
-    const id = editingHeight === 'new' ? 'h' + Date.now() : editingHeight;
+    const id = editingHeight === 'new' ? 'h' + Date.now() + Math.random().toString(36).slice(2, 6) : editingHeight;
     chartSel = id;
     run(store.setHeight(id, entry), 'Measurement saved');
     closeHeightForm();
@@ -631,6 +632,37 @@
     chartSel = null;
     run(store.delHeight(editingHeight), 'Deleted');
     closeHeightForm();
+  }
+
+  // "If growth continues at the current rate": straight-line estimate at age 17.
+  function renderProjection(series, unit) {
+    const AGE = 17;
+    const s = store.state.settings;
+    const big = $('proj-big');
+    const note = $('proj-note');
+    if (!s.birthday) {
+      big.textContent = '–';
+      note.textContent = 'Add a birthday in Settings to see a projection.';
+      return;
+    }
+    const proj = S.projectHeight(series, s.birthday, AGE);
+    const age = S.ageOn(s.birthday, S.localToday());
+    if (!proj) {
+      big.textContent = '–';
+      note.textContent = series.length < 2
+        ? `Needs a growth rate first: two measurements at least 3 months apart. Now age ${age}.`
+        : S.growthRate(series) === null
+          ? `Needs two measurements at least 3 months apart. Now age ${age}.`
+          : `Already past age ${AGE}.`;
+      return;
+    }
+    const { feet, inches } = S.feetInches(proj.cm);
+    const whole = Math.floor(inches);
+    big.innerHTML = `${feet}′ ${whole}${inches - whole ? '½' : ''}″ <small>at ${AGE}</small>`;
+    const rate = Number(S.fromCm(proj.cmPerYear, unit).toFixed(1));
+    const total = unit === 'cm' ? `${Math.round(proj.cm)} cm` : `${S.fromCm(proj.cm, 'in').toFixed(1)} in`;
+    note.textContent = `${total} by ${dFmt(proj.date)} if growth continues at ${rate} ${unit} per year. ` +
+      'A straight-line estimate: real growth speeds up and slows down with puberty, so treat it as a rough guide.';
   }
 
   function renderRate(series, unit) {
@@ -766,6 +798,7 @@
       restDay: Number(f.restDay.value),
       cartridgeMg: Number(f.cartridgeMg.value),
       heightUnit: f.heightUnit.value,
+      birthday: f.birthday.value,
       reminderTime: f.reminderTime.value || '20:00',
       nextDelivery: f.nextDelivery.value,
       timeZone: window.Store.timeZone(),

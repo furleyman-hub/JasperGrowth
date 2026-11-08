@@ -8,6 +8,7 @@ A phone app (installable web app / PWA) for tracking daily growth hormone inject
 - Injection site picker: choose an area (right thigh, left thigh, stomach) and a corner (L/R upper, L/R lower). It suggests the next spot: areas rotate each injection and the corner advances after each full pass, so a spot comes around again after 12 injections. The last site used shows on the day screen
 - Cartridge tracking: mg left, doses left, warning when the next dose won't fit
 - Supplies: needles (1 per dose, count can be corrected), spare cartridges, next delivery date, "medicine lasts through" estimate
+- **Projected height**: if growth continues at the current average rate, the estimated height at age 17 in feet and inches (needs two measurements 3+ months apart; set the birthday in Settings)
 - **Growth tab**: latest height shown big, a height-over-time chart (tap a point for its value), average growth rate, and a measurement list you can edit or delete. Inches or centimeters in Settings
 - Shared records via Firebase (each entry shows who logged it), offline support
 - Evening reminder notifications if the dose hasn't been logged (plus one follow-up 2 hours later)

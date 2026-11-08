@@ -225,7 +225,36 @@
     return { cmPerYear: ((last.cm - first.cm) / days) * 365.25, days, from: first.date, to: last.date };
   }
 
+  // Age in whole years on a given date, and the date of a given birthday.
+  function ageOn(birthday, iso) {
+    const [by, bm, bd] = birthday.split('-').map(Number);
+    const [y, m, d] = iso.split('-').map(Number);
+    return y - by - (m < bm || (m === bm && d < bd) ? 1 : 0);
+  }
+  function birthdayDate(birthday, age) {
+    return `${Number(birthday.slice(0, 4)) + age}${birthday.slice(4)}`;
+  }
+
+  // Straight-line projection: latest height plus the average growth rate for the
+  // time left until the given birthday. Null without a rate (see growthRate).
+  function projectHeight(series, birthday, age) {
+    const rate = growthRate(series);
+    if (!rate || !birthday) return null;
+    const last = series[series.length - 1];
+    const target = birthdayDate(birthday, age);
+    const days = diffDays(last.date, target);
+    if (days <= 0) return null;
+    return { cm: last.cm + (rate.cmPerYear * days) / 365.25, date: target, cmPerYear: rate.cmPerYear, days };
+  }
+
+  // 175.3 cm -> { feet: 5, inches: 9 } rounded to the nearest half inch.
+  function feetInches(cm) {
+    const half = Math.round((cm / CM_PER_IN) * 2) / 2;
+    return { feet: Math.floor(half / 12), inches: half - Math.floor(half / 12) * 12 };
+  }
+
   const api = {
+    ageOn, birthdayDate, projectHeight, feetInches,
     CM_PER_IN, toCm, fromCm, parseLength, heightSeries, growthRate,
     SITES, SITE_AREAS, CORNERS, siteLabel, parseSite, addDays, diffDays, weekday, localToday, round2,
     computePlans, planFor, currentCartridge, cartridgeStatus, needlesLeft, lastSite, nextSite, forecast,

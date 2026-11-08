@@ -21,6 +21,7 @@
     needles: null, // { count, asOf }
     nextDelivery: '',
     heightUnit: 'in',
+    birthday: '2013-04-05',
   };
   const DEFAULT_CARTRIDGE = { id: 'c1', mg: 12, startedAt: '2026-10-04T00:00:00', adjust: 0 };
 

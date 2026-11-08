@@ -97,6 +97,24 @@ test('parseLength reads decimals and fractions', () => {
   for (const bad of ['', 'abc', '5 1/0', '1/', '--', null]) assert.ok(Number.isNaN(S.parseLength(bad)), String(bad));
 });
 
+test('age, feet/inches and projection to a birthday', () => {
+  assert.strictEqual(S.ageOn('2013-04-05', '2026-11-08'), 13);
+  assert.strictEqual(S.ageOn('2013-04-05', '2026-04-04'), 12);
+  assert.strictEqual(S.ageOn('2013-04-05', '2026-04-05'), 13);
+  assert.strictEqual(S.birthdayDate('2013-04-05', 17), '2030-04-05');
+  assert.deepStrictEqual(S.feetInches(150.1975), { feet: 4, inches: 11 });   // 59.1 in -> 59 in
+  assert.deepStrictEqual(S.feetInches(175.26), { feet: 5, inches: 9 });
+  assert.deepStrictEqual(S.feetInches(176.5), { feet: 5, inches: 9.5 });
+  const series = S.heightSeries({ a: { date: '2026-10-04', cm: 150 }, b: { date: '2027-04-05', cm: 153 } });
+  const p = S.projectHeight(series, '2013-04-05', 17);
+  assert.strictEqual(p.date, '2030-04-05');
+  // 3 cm over 183 days ~ 5.99 cm/yr, 3.0 years ahead from the latest measurement
+  assert.ok(Math.abs(p.cm - (153 + p.cmPerYear * (p.days / 365.25))) < 1e-9);
+  assert.ok(p.cm > 170 && p.cm < 173);
+  // no rate yet -> no projection
+  assert.strictEqual(S.projectHeight(S.heightSeries({ a: { date: '2026-10-04', cm: 150 } }), '2013-04-05', 17), null);
+});
+
 test('growth rate needs 90+ days and annualizes', () => {
   const short = S.heightSeries({ a: { date: '2026-01-01', cm: 140 }, b: { date: '2026-02-01', cm: 141 } });
   assert.strictEqual(S.growthRate(short), null);

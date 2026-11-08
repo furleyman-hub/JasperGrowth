@@ -1,6 +1,6 @@
 (async function () {
   const S = window.Schedule;
-  const VERSION = '0.9.0';
+  const VERSION = '0.9.1';
 
   const $ = (id) => document.getElementById(id);
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -539,10 +539,19 @@
       const change = older ? Number(S.fromCm(h.cm - older.cm, unit).toFixed(2)) : null;
       const li = document.createElement('li');
       li.innerHTML = `<span>${dFmt(h.date)}${h.note ? ` <small>${h.note.replace(/</g, '&lt;')}</small>` : ''}</span>` +
-        `<span>${hFmt(h.cm, unit)} ${unit}${change === null ? '' : ` <small>${sign(change)}${Math.abs(change)}</small>`}</span>`;
-      li.addEventListener('click', () => { editingHeight = h.id; renderGrowth(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        `<span class="h-right">${hFmt(h.cm, unit)} ${unit}${change === null ? '' : ` <small>${sign(change)}${Math.abs(change)}</small>`}` +
+        ` <button type="button" class="edit-chip" aria-label="Edit measurement from ${dFmt(h.date)}">Edit</button></span>`;
+      li.addEventListener('click', () => openHeightEdit(h.id));
       ul.appendChild(li);
     });
+  }
+
+  // Open the measurement editor for an existing entry (from the list or the chart readout).
+  function openHeightEdit(id) {
+    editingHeight = id;
+    $('height-form').dataset.for = '';
+    renderGrowth();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function renderHeightForm(unit) {
@@ -657,7 +666,8 @@
     const select = (i) => {
       const p = pts[i];
       chartSel = p.id;
-      readout.innerHTML = `<b>${hFmt(p.cm, unit)} ${unit}</b> · ${dFmt(p.date)}${p.note ? ' · ' + p.note.replace(/</g, '&lt;') : ''}`;
+      readout.innerHTML = `<b>${hFmt(p.cm, unit)} ${unit}</b> · ${dFmt(p.date)}${p.note ? ' · ' + p.note.replace(/</g, '&lt;') : ''}` +
+        ` <button type="button" class="edit-chip" data-edit="${p.id}">Edit</button>`;
       box.querySelectorAll('.ch-dot').forEach((d) => d.classList.toggle('sel', Number(d.dataset.i) === i));
     };
     box.querySelectorAll('.ch-hit').forEach((h) => {
@@ -786,6 +796,10 @@
   $('open-settings').addEventListener('click', openSettings);
   $('open-settings-g').addEventListener('click', openSettings);
   for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', () => setTab(b.dataset.tab));
+  $('chart-readout').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-edit]');
+    if (b) openHeightEdit(b.dataset.edit);
+  });
   $('add-height-btn').addEventListener('click', () => { editingHeight = 'new'; renderGrowth(); });
   $('height-form').addEventListener('submit', onHeightSave);
   $('height-cancel').addEventListener('click', closeHeightForm);

@@ -216,3 +216,10 @@ body.has-tabs #app { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .toast.show { opacity: 1; visibility: visible; }
 
 .card-title.sub { margin: 14px 0 10px; text-align: center; }
+
+.h-right { display: inline-flex; align-items: center; gap: 8px; }
+.edit-chip {
+  font: inherit; font-size: 13px; color: var(--accent); background: transparent;
+  border: 1px solid rgba(79, 195, 247, 0.45); border-radius: 10px; padding: 4px 10px; min-height: 30px; cursor: pointer;
+}
+.chart-readout .edit-chip { margin-left: 6px; }
